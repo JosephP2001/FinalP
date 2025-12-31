@@ -17,7 +17,7 @@ const Navbar = () => {
           <Link to="/dashboard" className="flex items-center space-x-2">
             <div className="text-3xl">📊</div>
             <span className="text-xl font-bold text-primary-600">
-              Encuestas UCE
+              UCE Surveys
             </span>
           </Link>
 
@@ -35,7 +35,7 @@ const Navbar = () => {
               className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors"
             >
               <FileText size={20} />
-              <span>Mis Encuestas</span>
+              <span>My Surveys</span>
             </Link>
           </div>
 
@@ -43,14 +43,14 @@ const Navbar = () => {
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2 text-gray-700">
               <User size={20} />
-              <span className="hidden md:inline">Juan Pérez</span>
+              <span className="hidden md:inline">UserName</span>
             </div>
             <button
               onClick={handleLogout}
               className="flex items-center space-x-2 text-red-600 hover:text-red-700 transition-colors"
             >
               <LogOut size={20} />
-              <span className="hidden md:inline">Salir</span>
+              <span className="hidden md:inline">Log Out</span>
             </button>
           </div>
         </div>
