@@ -2,14 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { connectDB } from './config/database.js';
+import { connectRedis } from './config/redis.js';
 import authRoutes from './routes/authRoutes.js';
 import surveyRoutes from './routes/surveyRoutes.js';
 import responseRoutes from './routes/responseRoutes.js';
 
-// Cargar variables de entorno
 dotenv.config();
 
-// Crear app de Express
 const app = express();
 
 // Middleware
@@ -55,15 +54,17 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
-  try {
-    // Conectar a MongoDB
+  try {                               //DB's connection
+    
     await connectDB();
     
-    // Iniciar servidor
+    await connectRedis();
+    
+    // Run Server
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV}`);
-      console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+      console.log(` Server running on port ${PORT}`);
+      console.log(` Environment: ${process.env.NODE_ENV}`);
+      console.log(` Health check: http://localhost:${PORT}/health`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
