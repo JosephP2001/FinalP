@@ -5,8 +5,9 @@ import { FileText, CheckCircle, TrendingUp, Plus } from 'lucide-react';
 const Dashboard = () => {
   // Datos de ejemplo (wireframe)
   const stats = [
-    { icon: FileText, label: 'Total surveys', value: '12',  color: 'bg-blue-500' },
-    { icon: CheckCircle, label: 'Total Answers', value: '847',  color: 'bg-green-500' },
+    { icon: FileText, label: 'Total Encuestas', value: '12', subtext: '3 activas, 9 cerradas', color: 'bg-blue-500' },
+    { icon: CheckCircle, label: 'Respuestas Totales', value: '847', subtext: '+23 esta semana', color: 'bg-green-500' },
+    { icon: TrendingUp, label: 'Tasa de Respuesta', value: '68%', subtext: '+5% vs mes anterior', color: 'bg-purple-500' },
   ];
 
   const recentSurveys = [
@@ -16,7 +17,7 @@ const Dashboard = () => {
       status: 'active',
       responses: '234 / 300',
       percentage: 78,
-      date: '22 Dic 2025'
+      date: '15 Dic 2024'
     },
     {
       id: 2,
@@ -24,7 +25,7 @@ const Dashboard = () => {
       status: 'active',
       responses: '156 / 200',
       percentage: 78,
-      date: '21 Dic 2025'
+      date: '10 Dic 2024'
     },
     {
       id: 3,
@@ -32,7 +33,7 @@ const Dashboard = () => {
       status: 'closed',
       responses: '89 / 100',
       percentage: 89,
-      date: '20 Dic 2025'
+      date: '1 Dic 2024'
     },
   ];
 
@@ -44,9 +45,11 @@ const Dashboard = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Dashboard 
+            Bienvenido, Juan Pérez 👋
           </h1>
-  
+          <p className="text-gray-600">
+            Aquí está el resumen de tus encuestas
+          </p>
         </div>
 
         {/* Stats Cards */}
@@ -68,11 +71,11 @@ const Dashboard = () => {
         {/* Recent Surveys Section */}
         <div className="bg-white rounded-xl shadow-md p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">Your Surveys</h2>
+            <h2 className="text-2xl font-bold text-gray-800">Encuestas Recientes</h2>
             <Link to="/surveys/create">
               <button className="btn-primary flex items-center space-x-2">
                 <Plus size={20} />
-                <span>New Survey</span>
+                <span>Nueva Encuesta</span>
               </button>
             </Link>
           </div>
@@ -82,11 +85,11 @@ const Dashboard = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Title</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">State</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Answers</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Date</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Accions</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Título</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Estado</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Respuestas</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Fecha</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -101,7 +104,7 @@ const Dashboard = () => {
                           ? 'bg-green-100 text-green-700' 
                           : 'bg-gray-100 text-gray-700'
                       }`}>
-                        {survey.status === 'active' ? 'Active' : 'Close'}
+                        {survey.status === 'active' ? 'Activa' : 'Cerrada'}
                       </span>
                     </td>
                     <td className="py-4 px-4">

@@ -6,13 +6,13 @@ const SurveyList = () => {
   const surveys = [
     {
       id: 1,
-      title: 'Evaluación Docente Semestre 2025',
+      title: 'Evaluación Docente Semestre 2024-2',
       description: 'Encuesta para evaluar el desempeño docente en la Facultad de Ingeniería',
       status: 'active',
       responses: 234,
       maxResponses: 300,
       percentage: 78,
-      createdAt: '2 days ago'
+      createdAt: 'Hace 2 días'
     },
     {
       id: 2,
@@ -22,7 +22,7 @@ const SurveyList = () => {
       responses: 156,
       maxResponses: 200,
       percentage: 78,
-      createdAt: '3 days ago'
+      createdAt: 'Hace 5 días'
     },
     {
       id: 3,
@@ -32,7 +32,7 @@ const SurveyList = () => {
       responses: 89,
       maxResponses: 100,
       percentage: 89,
-      createdAt: '1 week ago'
+      createdAt: 'Hace 2 semanas'
     }
   ];
 
@@ -44,14 +44,33 @@ const SurveyList = () => {
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">My Surveys</h1>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Mis Encuestas</h1>
+            <p className="text-gray-600">Gestiona y visualiza todas tus encuestas</p>
           </div>
           <Link to="/surveys/create">
             <button className="btn-primary flex items-center space-x-2">
               <Plus size={20} />
-              <span>New Survey</span>
+              <span>Crear Nueva Encuesta</span>
             </button>
           </Link>
+        </div>
+
+        {/* Search and Filter */}
+        <div className="flex gap-4 mb-6">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-3 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="🔍 Buscar encuestas..."
+              className="input-field pl-10"
+            />
+          </div>
+          <select className="input-field w-48">
+            <option>Todas</option>
+            <option>Activas</option>
+            <option>Cerradas</option>
+            <option>Borradores</option>
+          </select>
         </div>
 
         {/* Survey Cards Grid */}
@@ -65,7 +84,7 @@ const SurveyList = () => {
                     ? 'bg-green-100 text-green-700'
                     : 'bg-gray-100 text-gray-700'
                 }`}>
-                  {survey.status === 'active' ? 'ACTIVE' : 'CLOSE'}
+                  {survey.status === 'active' ? 'ACTIVA' : 'CERRADA'}
                 </span>
                 <span className="text-sm text-gray-500">{survey.createdAt}</span>
               </div>
@@ -82,7 +101,7 @@ const SurveyList = () => {
               <div className="mb-4 p-4 bg-gray-50 rounded-lg">
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-gray-700">
-                    📊 Answers: <strong>{survey.responses} / {survey.maxResponses}</strong>
+                    📊 Respuestas: <strong>{survey.responses} / {survey.maxResponses}</strong>
                   </span>
                   <span className="text-gray-600">{survey.percentage}%</span>
                 </div>
@@ -101,10 +120,12 @@ const SurveyList = () => {
                 <Link to={`/surveys/${survey.id}/results`} className="flex-1">
                   <button className="btn-primary w-full flex items-center justify-center space-x-2">
                     <Eye size={18} />
-                    <span>View Results</span>
+                    <span>Ver Resultados</span>
                   </button>
                 </Link>
-
+                <button className="btn-secondary px-4 flex items-center justify-center">
+                  <Share2 size={18} />
+                </button>
                 <button className="btn-secondary px-4 flex items-center justify-center">
                   <Edit size={18} />
                 </button>
@@ -118,12 +139,13 @@ const SurveyList = () => {
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">📝</div>
                 <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                  New Survey
+                  Crear Nueva Encuesta
                 </h3>
-                
-
+                <p className="text-gray-500">
+                  Comienza a recolectar datos valiosos
+                </p>
                 <button className="btn-primary mt-4">
-                  + New Survey
+                  + Nueva Encuesta
                 </button>
               </div>
             </div>

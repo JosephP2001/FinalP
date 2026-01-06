@@ -10,23 +10,23 @@ const SurveyResults = () => {
 
   // Datos de ejemplo para gráficos
   const barData = [
-    { name: 'Excelent', value: 120 },
-    { name: 'Good', value: 89 },
+    { name: 'Excelente', value: 120 },
+    { name: 'Buena', value: 89 },
     { name: 'Regular', value: 20 },
-    { name: 'Bad', value: 5 },
+    { name: 'Mala', value: 5 },
   ];
 
   const pieData = [
-    { name: 'Highly satisfied', value: 140 },
-    { name: 'Satisfied', value: 70 },
+    { name: 'Muy Satisfecho', value: 140 },
+    { name: 'Satisfecho', value: 70 },
     { name: 'Neutral', value: 18 },
-    { name: 'Dissatisfied', value: 6 },
+    { name: 'Insatisfecho', value: 6 },
   ];
 
   const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
 
   const aiInsights = {
-    sentiment: 'Positive',
+    sentiment: 'Positivo',
     summary: 'La mayoría de estudiantes expresan satisfacción con la metodología del docente. Se destaca la claridad en las explicaciones y el dominio del tema. Área de mejora: aumentar ejemplos prácticos.',
     patterns: [
       'El 85% considera la metodología entre buena y excelente',
@@ -36,9 +36,9 @@ const SurveyResults = () => {
   };
 
   const responses = [
-    { id: 1, date: '2025-12-22 10:30', q1: 'Excelente', q2: 5, q3: 'Me gustaría más ejercicios prácticos' },
-    { id: 2, date: '2025-12-21 11:15', q1: 'Buena', q2: 4, q3: 'Muy clara la explicación' },
-    { id: 3, date: '2025-12-23 12:00', q1: 'Excelente', q2: 5, q3: 'Excelente docente' },
+    { id: 1, date: '2024-12-20 10:30', q1: 'Excelente', q2: 5, q3: 'Me gustaría más ejercicios prácticos' },
+    { id: 2, date: '2024-12-20 11:15', q1: 'Buena', q2: 4, q3: 'Muy clara la explicación' },
+    { id: 3, date: '2024-12-20 12:00', q1: 'Excelente', q2: 5, q3: 'Excelente docente' },
   ];
 
   return (
@@ -51,21 +51,23 @@ const SurveyResults = () => {
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                Results: Evaluación Docente Semestre 2025
+                Resultados: Evaluación Docente Semestre 2024-2
               </h1>
-
+              <p className="text-gray-600">
+                234 respuestas recibidas de 300 esperadas
+              </p>
             </div>
             <div className="flex gap-3">
               <button className="btn-secondary flex items-center space-x-2">
                 <Download size={18} />
-                <span>Export CSV</span>
+                <span>Exportar CSV</span>
               </button>
               <button 
                 onClick={() => setShowAI(!showAI)}
                 className="btn-primary flex items-center space-x-2"
               >
                 <Sparkles size={18} />
-                <span>IA Analysis</span>
+                <span>Análisis con IA</span>
               </button>
             </div>
           </div>
@@ -76,9 +78,9 @@ const SurveyResults = () => {
           <div className="card">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm mb-1">Total Responses</p>
+                <p className="text-gray-600 text-sm mb-1">Total Respuestas</p>
                 <p className="text-3xl font-bold text-gray-800">234</p>
-                <p className="text-sm text-green-600 mt-1">78% completed</p>
+                <p className="text-sm text-green-600 mt-1">78% completado</p>
               </div>
               <Users className="w-12 h-12 text-blue-500 opacity-20" />
             </div>
@@ -87,8 +89,9 @@ const SurveyResults = () => {
           <div className="card">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm mb-1">Average</p>
+                <p className="text-gray-600 text-sm mb-1">Promedio General</p>
                 <p className="text-3xl font-bold text-gray-800">4.3/5</p>
+                <p className="text-sm text-green-600 mt-1">+0.3 vs anterior</p>
               </div>
               <TrendingUp className="w-12 h-12 text-green-500 opacity-20" />
             </div>
@@ -97,9 +100,9 @@ const SurveyResults = () => {
           <div className="card">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm mb-1">IA feeling</p>
-                <p className="text-3xl font-bold text-green-600">Positive</p>
-                <p className="text-sm text-gray-600 mt-1">85% satisfaction</p>
+                <p className="text-gray-600 text-sm mb-1">Sentimiento IA</p>
+                <p className="text-3xl font-bold text-green-600">Positivo</p>
+                <p className="text-sm text-gray-600 mt-1">85% satisfacción</p>
               </div>
               <Sparkles className="w-12 h-12 text-purple-500 opacity-20" />
             </div>
@@ -125,14 +128,14 @@ const SurveyResults = () => {
               </div>
 
               <div>
-                <h3 className="font-semibold text-gray-700 mb-2">Summary:</h3>
+                <h3 className="font-semibold text-gray-700 mb-2">Resumen Automático:</h3>
                 <p className="text-gray-700 bg-white p-4 rounded-lg">
                   {aiInsights.summary}
                 </p>
               </div>
 
               <div>
-                <h3 className="font-semibold text-gray-700 mb-2">Detected Pattern:</h3>
+                <h3 className="font-semibold text-gray-700 mb-2">Patrones Detectados:</h3>
                 <ul className="space-y-2">
                   {aiInsights.patterns.map((pattern, index) => (
                     <li key={index} className="flex items-start gap-2 bg-white p-3 rounded-lg">
@@ -151,7 +154,7 @@ const SurveyResults = () => {
           {/* Bar Chart */}
           <div className="card">
             <h3 className="text-xl font-bold text-gray-800 mb-4">
-              Question 1: ¿Cómo calificarías la metodología?
+              Pregunta 1: ¿Cómo calificarías la metodología?
             </h3>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={barData}>
@@ -167,7 +170,7 @@ const SurveyResults = () => {
           {/* Pie Chart */}
           <div className="card">
             <h3 className="text-xl font-bold text-gray-800 mb-4">
-              General Distribution Satisfaction
+              Distribución de Satisfacción General
             </h3>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
@@ -191,7 +194,58 @@ const SurveyResults = () => {
           </div>
         </div>
 
-
+        {/* Responses Table */}
+        <div className="card">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">
+            Respuestas Individuales
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b-2 border-gray-200">
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Fecha</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">P1: Metodología</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">P2: Claridad (1-5)</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">P3: Comentarios</th>
+                </tr>
+              </thead>
+              <tbody>
+                {responses.map((response) => (
+                  <tr key={response.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-3 px-4 text-gray-600 text-sm">
+                      {response.date}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                        {response.q1}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-gray-700">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{response.q2}</span>
+                        <div className="flex">
+                          {[...Array(5)].map((_, i) => (
+                            <span key={i} className={i < response.q2 ? 'text-yellow-400' : 'text-gray-300'}>
+                              ★
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 text-gray-600 text-sm max-w-xs truncate">
+                      {response.q3}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-4 text-center">
+            <button className="text-primary-600 hover:text-primary-700 font-medium">
+              Ver todas las respuestas (234) →
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

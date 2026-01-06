@@ -64,18 +64,22 @@ const SurveyBuilder = () => {
               onClick={() => navigate('/surveys')}
               className="text-gray-600 hover:text-gray-800"
             >
-              ← Go back
+              ← Volver
             </button>
             <div className="flex gap-3">
               <button className="btn-secondary flex items-center space-x-2">
+                <Eye size={18} />
+                <span>Vista Previa</span>
+              </button>
+              <button className="btn-secondary flex items-center space-x-2">
                 <Save size={18} />
-                <span>Save Draft</span>
+                <span>Guardar Borrador</span>
               </button>
               <button 
                 onClick={handleSubmit}
                 className="btn-primary flex items-center space-x-2"
               >
-                <span>Publish Survey</span>
+                <span>Publicar Encuesta</span>
               </button>
             </div>
           </div>
@@ -84,23 +88,23 @@ const SurveyBuilder = () => {
 
       <div className="container mx-auto px-6 py-8 max-w-4xl">
         <h1 className="text-3xl font-bold text-gray-800 mb-8">
-          Create New Survey
+          Crear Nueva Encuesta
         </h1>
 
         {/* General Information */}
         <div className="card mb-6">
           <h2 className="text-xl font-bold text-gray-800 mb-4">
-            General Information
+            Información General
           </h2>
           
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Survey Title *
+                Título de la Encuesta *
               </label>
               <input
                 type="text"
-                placeholder="Example: Evaluación Docente 2025"
+                placeholder="Ej: Evaluación Docente 2024-2"
                 className="input-field"
                 value={survey.title}
                 onChange={(e) => setSurvey({...survey, title: e.target.value})}
@@ -109,10 +113,10 @@ const SurveyBuilder = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description
+                Descripción
               </label>
               <textarea
-                placeholder="Try with an easy description of your survey..."
+                placeholder="Describe el objetivo de esta encuesta..."
                 className="input-field"
                 rows="3"
                 value={survey.description}
@@ -123,34 +127,56 @@ const SurveyBuilder = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Start Date
+                  Fecha de Inicio
                 </label>
                 <input
-  type="text"
-  placeholder="dd/mm/yyyy"
-  className="input-field"
-  value={survey.startDate}
-  onChange={(e) => setSurvey({ ...survey, startDate: e.target.value })}
-/>
-
+                  type="date"
+                  className="input-field"
+                  value={survey.startDate}
+                  onChange={(e) => setSurvey({...survey, startDate: e.target.value})}
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Close Date
+                  Fecha de Cierre
                 </label>
                 <input
-  type="text"
-  placeholder="dd/mm/yyyy"
-  className="input-field"
-  value={survey.startDate}
-  onChange={(e) => setSurvey({ ...survey, startDate: e.target.value })}
-/>
-
+                  type="date"
+                  className="input-field"
+                  value={survey.endDate}
+                  onChange={(e) => setSurvey({...survey, endDate: e.target.value})}
+                />
               </div>
             </div>
 
             <div>
-
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Configuración de Acceso
+              </label>
+              <div className="flex gap-6">
+                <label className="flex items-center space-x-2">
+                  <input 
+                    type="radio" 
+                    name="access" 
+                    value="public"
+                    checked={survey.access === 'public'}
+                    onChange={(e) => setSurvey({...survey, access: e.target.value})}
+                    className="text-primary-600"
+                  />
+                  <span>Pública (cualquiera con el link)</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input 
+                    type="radio" 
+                    name="access" 
+                    value="private"
+                    checked={survey.access === 'private'}
+                    onChange={(e) => setSurvey({...survey, access: e.target.value})}
+                    className="text-primary-600"
+                  />
+                  <span>Privada (requiere autenticación)</span>
+                </label>
+              </div>
             </div>
           </div>
         </div>
@@ -158,13 +184,13 @@ const SurveyBuilder = () => {
         {/* Questions Section */}
         <div className="mb-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-gray-800">Questions</h2>
+            <h2 className="text-xl font-bold text-gray-800">Preguntas</h2>
             <button 
               onClick={addQuestion}
               className="btn-primary flex items-center space-x-2"
             >
               <Plus size={18} />
-              <span>Add Question</span>
+              <span>Agregar Pregunta</span>
             </button>
           </div>
 
@@ -177,10 +203,10 @@ const SurveyBuilder = () => {
                   <div className="flex items-center space-x-3">
                     <GripVertical className="text-gray-400 cursor-move" size={20} />
                     <span className="font-semibold text-gray-700">
-                      Question {index + 1}
+                      Pregunta {index + 1}
                     </span>
                     <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-semibold">
-                      {question.type === 'multiple' ? 'Multiple Choice' : 'Texto Libre'}
+                      {question.type === 'multiple' ? 'Opción Múltiple' : 'Texto Libre'}
                     </span>
                   </div>
                   <div className="flex gap-2">
@@ -236,7 +262,7 @@ const SurveyBuilder = () => {
                       }}
                       className="text-primary-600 text-sm hover:text-primary-700"
                     >
-                      + Add Option
+                      + Agregar opción
                     </button>
                   </div>
                 )}
@@ -250,7 +276,7 @@ const SurveyBuilder = () => {
                       onChange={(e) => updateQuestion(question.id, 'required', e.target.checked)}
                       className="rounded text-primary-600"
                     />
-                    <span className="text-sm text-gray-600">Must be Answered</span>
+                    <span className="text-sm text-gray-600">Pregunta obligatoria</span>
                   </label>
                 </div>
               </div>
@@ -264,17 +290,17 @@ const SurveyBuilder = () => {
             onClick={() => navigate('/surveys')}
             className="btn-secondary"
           >
-            Cancel
+            Cancelar
           </button>
           <div className="flex gap-3">
             <button className="btn-secondary">
-              Save Draft
+              Guardar como Borrador
             </button>
             <button 
               onClick={handleSubmit}
               className="btn-primary"
             >
-              Publish Survey
+              Publicar Encuesta
             </button>
           </div>
         </div>
