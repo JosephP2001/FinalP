@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: survey_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - survey_network
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: survey_backend
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - MONGODB_URI=mongodb://mongo:27017/survey_db
+      - JWT_SECRET=tu_super_secreto_jwt_cambiar_en_produccion_123456789
+      - JWT_EXPIRE=7d
+      - CORS_ORIGIN=*
+    depends_on:
+      - mongo
+    networks:
+      - survey_network
+    restart: unless-stopped
+
+ #------------------------------------
+  mongo:
+    image: mongo:7.0
+    container_name: survey_mongodb
+    ports:
+      - "27017:27017"
+    volumes:   #////////////////////
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=survey_db
+    networks:
+      - survey_network
+    restart: unless-stopped
+#-------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: survey_redis
+    ports:
+      - "6379:6379"
+    volumes:    #///////////////////
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - survey_network
+    restart: unless-stopped
+ #-------------------------------------   
+networks:
+  survey_network:
+    driver: bridge
+
+volumes:  #/////////////////////
+  mongodb_data:
+    driver: local
