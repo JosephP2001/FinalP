@@ -1,12 +1,14 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Home, FileText, LogOut, User } from 'lucide-react';
+import { authService } from '../services/authService';
 
 const Navbar = () => {
-  const navigate = useNavigate();
+  const user = authService.getCurrentUser();
 
   const handleLogout = () => {
-    // Aquí iría la lógica de logout
-    navigate('/login');
+    if (confirm('¿Estás seguro de cerrar sesión?')) {
+      authService.logout();
+    }
   };
 
   return (
@@ -43,14 +45,14 @@ const Navbar = () => {
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2 text-gray-700">
               <User size={20} />
-              <span className="hidden md:inline">UserName</span>
+              <span className="hidden md:inline">{user?.name || 'Usuario'}</span>
             </div>
             <button
               onClick={handleLogout}
               className="flex items-center space-x-2 text-red-600 hover:text-red-700 transition-colors"
             >
               <LogOut size={20} />
-              <span className="hidden md:inline">Log Out</span>
+              <span className="hidden md:inline">Exit</span>
             </button>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import SurveyList from './pages/SurveyList';
@@ -12,11 +13,31 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/surveys" element={<SurveyList />} />
-        <Route path="/surveys/create" element={<SurveyBuilder />} />
+        
+        {/* Rutas protegidas */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/surveys" element={
+          <ProtectedRoute>
+            <SurveyList />
+          </ProtectedRoute>
+        } />
+        <Route path="/surveys/create" element={
+          <ProtectedRoute>
+            <SurveyBuilder />
+          </ProtectedRoute>
+        } />
+        <Route path="/surveys/:id/results" element={
+          <ProtectedRoute>
+            <SurveyResults />
+          </ProtectedRoute>
+        } />
+        
+        {/* Public Rout --> Survey Answers */}
         <Route path="/surveys/:id/respond" element={<SurveyRespond />} />
-        <Route path="/surveys/:id/results" element={<SurveyResults />} />
       </Routes>
     </Router>
   );

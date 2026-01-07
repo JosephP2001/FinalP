@@ -24,7 +24,7 @@ export const connectRedis = async () => {
     return redisClient;
   } catch (error) {
     console.error(':,v Redis connection failed:', error.message);
-    // DO NOT STOP THE APP IF REDIS FAIL
+    // DO NOT STOP THE APP IF REDIS FAIL !!!!!!!!!
     return null;
   }
 };
