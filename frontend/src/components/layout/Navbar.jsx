@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Home, FileText, LogOut, User } from 'lucide-react';
-import { authService } from '../services/authService';
+import { authService } from '../../services/authService';
 
 const Navbar = () => {
   const user = authService.getCurrentUser();

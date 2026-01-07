@@ -1,4 +1,4 @@
-# .dockerignore (coloca uno en /frontend y otro en /backend)
+# .dockerignore 
 
 # Node modules
 node_modules
