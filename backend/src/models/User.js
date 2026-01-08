@@ -17,7 +17,9 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: [true, 'Password is required'],
+    required: function() {
+      return !this.authProvider || this.authProvider === 'local';
+    },
     minlength: 6,
     select: false
   },
@@ -25,13 +27,23 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['student', 'faculty', 'admin'],
     default: 'student'
-  }
+  },
+  authProvider: {
+    type: String,
+    enum: ['local', 'github'],
+    default: 'local'
+  },
+  providerId: {
+    type: String,
+    sparse: true
+  },
+  avatar: String
 }, {
   timestamps: true
 });
 
 userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) {
+  if (!this.isModified('password') || this.authProvider !== 'local') {
     return next();
   }
   const salt = await bcrypt.genSalt(10);
@@ -40,6 +52,7 @@ userSchema.pre('save', async function(next) {
 });
 
 userSchema.methods.comparePassword = async function(candidatePassword) {
+  if (this.authProvider !== 'local') return false;
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
