@@ -1,47 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle } from 'lucide-react';
+import { surveyService } from '../services/surveyService';
+import { responseService } from '../services/responseService';
 
 const SurveyRespond = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [submitted, setSubmitted] = useState(false);
   
-  // Datos de ejemplo (wireframe)
-  const surveyData = {
-    title: 'Evaluación Docente Semestre 2024-2',
-    description: 'Por favor responde las siguientes preguntas sobre la metodología y desempeño de tu docente.',
-    questions: [
-      {
-        id: 1,
-        text: '¿Cómo calificarías la metodología del docente?',
-        type: 'multiple',
-        options: ['Excelente', 'Buena', 'Regular', 'Mala'],
-        required: true
-      },
-      {
-        id: 2,
-        text: 'El docente explica los conceptos de manera clara',
-        type: 'scale',
-        min: 1,
-        max: 5,
-        required: true
-      },
-      {
-        id: 3,
-        text: '¿Qué aspectos podrían mejorar en la clase?',
-        type: 'text',
-        required: false
-      }
-    ]
-  };
-
+  const [survey, setSurvey] = useState(null);
   const [answers, setAnswers] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Aquí iría la lógica para enviar respuestas
-    setSubmitted(true);
+  useEffect(() => {
+    fetchSurvey();
+  }, [id]);
+
+  const fetchSurvey = async () => {
+    try {
+      setLoading(true);
+      const response = await surveyService.getSurvey(id);
+      setSurvey(response.data);
+    } catch (err) {
+      console.error('Error fetching survey:', err);
+      setError('No se pudo cargar la encuesta');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAnswerChange = (questionId, value) => {
@@ -51,6 +39,75 @@ const SurveyRespond = () => {
     });
   };
 
+  const validateAnswers = () => {
+    if (!survey) return false;
+    
+    for (const question of survey.questions) {
+      if (question.required && !answers[question._id]) {
+        setError(`La pregunta "${question.text}" es obligatoria`);
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    
+    if (!validateAnswers()) {
+      return;
+    }
+    
+    try {
+      setSubmitting(true);
+      
+      const answersArray = Object.entries(answers).map(([questionId, value]) => ({
+        questionId,
+        value
+      }));
+      
+      await responseService.submitResponse(id, answersArray);
+      
+      setSubmitted(true);
+      
+    } catch (err) {
+      console.error('Error submitting response:', err);
+      setError(err.response?.data?.message || 'Error al enviar respuesta');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center">
+        <div className="text-white text-xl">Loading survey...</div>
+      </div>
+    );
+  }
+
+  if (error && !survey) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-md w-full text-center">
+          <AlertCircle className="w-20 h-20 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">
+            Error
+          </h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button 
+            onClick={() => navigate('/')}
+            className="btn-primary w-full"
+          >
+            Go back to main page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (submitted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center p-4">
@@ -59,16 +116,16 @@ const SurveyRespond = () => {
             <CheckCircle className="w-20 h-20 text-green-500 mx-auto" />
           </div>
           <h2 className="text-3xl font-bold text-gray-800 mb-4">
-            ¡Gracias por tu respuesta!
+            ¡Thanks for your Responses!
           </h2>
           <p className="text-gray-600 mb-8">
-            Tu opinión es muy importante para nosotros. Hemos registrado tus respuestas exitosamente.
+            Your responses have been submmited.
           </p>
           <button 
             onClick={() => navigate('/')}
             className="btn-primary w-full"
           >
-            Finalizar
+            Finish
           </button>
         </div>
       </div>
@@ -83,11 +140,13 @@ const SurveyRespond = () => {
           <div className="text-center mb-2">
             <div className="text-5xl mb-4">📊</div>
             <h1 className="text-3xl font-bold text-gray-800 mb-3">
-              {surveyData.title}
+              {survey?.title}
             </h1>
-            <p className="text-gray-600">
-              {surveyData.description}
-            </p>
+            {survey?.description && (
+              <p className="text-gray-600">
+                {survey.description}
+              </p>
+            )}
           </div>
           <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
             <p className="text-sm text-blue-800">
@@ -96,10 +155,17 @@ const SurveyRespond = () => {
           </div>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-red-700">{error}</p>
+          </div>
+        )}
+
         {/* Questions Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          {surveyData.questions.map((question, index) => (
-            <div key={question.id} className="bg-white rounded-xl shadow-lg p-6">
+          {survey?.questions.map((question, index) => (
+            <div key={question._id} className="bg-white rounded-xl shadow-lg p-6">
               {/* Question Header */}
               <div className="mb-4">
                 <div className="flex items-start gap-3">
@@ -127,9 +193,9 @@ const SurveyRespond = () => {
                     >
                       <input
                         type="radio"
-                        name={`question-${question.id}`}
+                        name={`question-${question._id}`}
                         value={option}
-                        onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+                        onChange={(e) => handleAnswerChange(question._id, e.target.value)}
                         required={question.required}
                         className="w-5 h-5 text-primary-600"
                       />
@@ -158,9 +224,9 @@ const SurveyRespond = () => {
                       >
                         <input
                           type="radio"
-                          name={`question-${question.id}`}
+                          name={`question-${question._id}`}
                           value={i + 1}
-                          onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+                          onChange={(e) => handleAnswerChange(question._id, e.target.value)}
                           required={question.required}
                           className="sr-only peer"
                         />
@@ -180,7 +246,7 @@ const SurveyRespond = () => {
                     rows="4"
                     placeholder="Escribe tu respuesta aquí..."
                     className="input-field"
-                    onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+                    onChange={(e) => handleAnswerChange(question._id, e.target.value)}
                     required={question.required}
                   />
                 </div>
@@ -192,9 +258,10 @@ const SurveyRespond = () => {
           <div className="bg-white rounded-xl shadow-lg p-6">
             <button
               type="submit"
+              disabled={submitting}
               className="btn-primary w-full py-4 text-lg"
             >
-              Enviar Respuestas
+              {submitting ? 'Enviando...' : 'Enviar Respuestas'}
             </button>
             <p className="text-center text-sm text-gray-500 mt-3">
               Al enviar, aceptas que tus respuestas sean procesadas de forma anónima

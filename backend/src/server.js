@@ -1,8 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import session from 'express-session';
 import { connectDB } from './config/database.js';
 import { connectRedis } from './config/redis.js';
+import passport from './config/passport.js';
 import authRoutes from './routes/authRoutes.js';
 import surveyRoutes from './routes/surveyRoutes.js';
 import responseRoutes from './routes/responseRoutes.js';
@@ -11,7 +13,6 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
 app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
   credentials: true
@@ -19,7 +20,19 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000
+  }
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
@@ -28,12 +41,10 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/surveys', surveyRoutes);
 app.use('/api/responses', responseRoutes);
 
-// 404 Handler
 app.use((req, res) => {
   res.status(404).json({ 
     success: false, 
@@ -41,7 +52,6 @@ app.use((req, res) => {
   });
 });
 
-// Error Handler
 app.use((err, req, res, next) => {
   console.error('Error:', err);
   res.status(err.status || 500).json({
@@ -50,24 +60,20 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Connect to Database & Start Server
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
-  try {                               //DB's connection
-    
+  try {
     await connectDB();
-    
     await connectRedis();
     
-    // Run Server
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(` Server running on port ${PORT}`);
-      console.log(` Environment: ${process.env.NODE_ENV}`);
-      console.log(` Health check: http://localhost:${PORT}/health`);
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
+      console.log(`✅ Health: http://localhost:${PORT}/health`);
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error('❌ Failed to start server:', error);
     process.exit(1);
   }
 };
