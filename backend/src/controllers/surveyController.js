@@ -1,4 +1,14 @@
+/*
+*Added: IA analysis (DONE)
+*Added: Fallback (DONE)
+*Added: Error Handling (-->IA) (DONE)
+*/ 
+
+
+
 import Survey from '../models/Survey.js';
+import Response from '../models/Response.js';
+import { analyzeSurveyResponses, generateQuickSummary } from '../services/aiService.js';
 
 // @desc    Get all surveys
 // @route   GET /api/surveys
@@ -49,6 +59,8 @@ export const getSurvey = async (req, res) => {
   }
 };
 
+
+//----------CRUD-----------------CRUD------------CRUD----------------CRUD--------
 // @desc    Create survey
 // @route   POST /api/surveys
 // @access  Private
@@ -88,7 +100,7 @@ export const updateSurvey = async (req, res) => {
       });
     }
 
-    // Verificar que el usuario sea el creador
+    // Verify: User === Creator????
     if (survey.creator.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -129,7 +141,7 @@ export const deleteSurvey = async (req, res) => {
       });
     }
 
-    // Verificar que el usuario sea el creador
+    // Verify: User === Creator????
     if (survey.creator.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -165,6 +177,63 @@ export const getMySurveys = async (req, res) => {
       data: surveys
     });
   } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// @desc    Get AI analysis of survey responses
+// @route   GET /api/surveys/:id/ai-analysis
+// @access  Private
+//Search-Verify-Get-Validate--Generate-Return
+export const getAIAnalysis = async (req, res) => {
+  try {
+    const survey = await Survey.findById(req.params.id);
+
+    if (!survey) {
+      return res.status(404).json({
+        success: false,
+        message: 'Survey not found'
+      });
+    }
+
+    // Verify: User === Creator????
+    if (survey.creator.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to view analysis'
+      });
+    }
+
+    // Get responses
+    const responses = await Response.find({ survey: req.params.id });
+
+    if (responses.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No responses available for analysis'
+      });
+    }
+
+    // IA Analysis Generator
+    let analysis;
+    
+    if (process.env.GROQ_API_KEY) {  
+      // using Groq IA
+      analysis = await analyzeSurveyResponses(survey, responses);
+    } else {
+      // Fallback -> Basic Summary
+      analysis = generateQuickSummary(survey, responses);
+    }
+
+    res.status(200).json({
+      success: true,
+      data: analysis
+    });
+  } catch (error) {
+    console.error('AI Analysis error:', error);
     res.status(500).json({
       success: false,
       message: error.message

@@ -1,250 +1,334 @@
-import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+/*
+*Conecton with Backend (DONE)
+*conection (surveyService)  (DONE)
+*conection (responseService) (DONE)
+*Added: loadSurveyData() 
+*Added: handleAIAnalysis()
+*/
+
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Download, Sparkles, TrendingUp, Users, Calendar, Brain } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Download, Sparkles, TrendingUp, Users } from 'lucide-react';
+import { surveyService } from '../services/surveyService';
+import { responseService } from '../services/responseService';
 
 const SurveyResults = () => {
   const { id } = useParams();
-  const [showAI, setShowAI] = useState(false);
+  const navigate = useNavigate();
+  const [survey, setSurvey] = useState(null);
+  const [responses, setResponses] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingAI, setLoadingAI] = useState(false);
+  const [error, setError] = useState('');
 
-  // Datos de ejemplo para gráficos
-  const barData = [
-    { name: 'Excelente', value: 120 },
-    { name: 'Buena', value: 89 },
-    { name: 'Regular', value: 20 },
-    { name: 'Mala', value: 5 },
-  ];
+  useEffect(() => {
+    loadSurveyData();
+  }, [id]);
 
-  const pieData = [
-    { name: 'Muy Satisfecho', value: 140 },
-    { name: 'Satisfecho', value: 70 },
-    { name: 'Neutral', value: 18 },
-    { name: 'Insatisfecho', value: 6 },
-  ];
+  const loadSurveyData = async () => {
+    try {
+      setLoading(true);
+      const [surveyData, responsesData, statsData] = await Promise.all([
+        surveyService.getSurvey(id),
+        responseService.getSurveyResponses(id),
+        responseService.getSurveyStats(id)
+      ]);
 
-  const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
-
-  const aiInsights = {
-    sentiment: 'Positivo',
-    summary: 'La mayoría de estudiantes expresan satisfacción con la metodología del docente. Se destaca la claridad en las explicaciones y el dominio del tema. Área de mejora: aumentar ejemplos prácticos.',
-    patterns: [
-      'El 85% considera la metodología entre buena y excelente',
-      'Mayor satisfacción en temas teóricos que prácticos',
-      'Se solicita más tiempo para ejercicios en clase'
-    ]
+      setSurvey(surveyData.data);
+      setResponses(responsesData.data);
+      setStats(statsData.data);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error al cargar resultados');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const responses = [
-    { id: 1, date: '2024-12-20 10:30', q1: 'Excelente', q2: 5, q3: 'Me gustaría más ejercicios prácticos' },
-    { id: 2, date: '2024-12-20 11:15', q1: 'Buena', q2: 4, q3: 'Muy clara la explicación' },
-    { id: 3, date: '2024-12-20 12:00', q1: 'Excelente', q2: 5, q3: 'Excelente docente' },
-  ];
+  const handleAIAnalysis = async () => {
+    try {
+      setLoadingAI(true);
+      setError('');
+      const analysisData = await surveyService.getAIAnalysis(id);
+      setAiAnalysis(analysisData.data.analysis);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error al generar análisis IA');
+    } finally {
+      setLoadingAI(false);
+    }
+  };
+
+  const calculateQuestionStats = (question) => {
+    const questionResponses = responses
+      .map(r => r.answers.find(a => a.questionId === question._id))
+      .filter(a => a);
+
+    if (question.type === 'multiple') {
+      const frequency = {};
+      questionResponses.forEach(a => {
+        frequency[a.value] = (frequency[a.value] || 0) + 1;
+      });
+      return Object.entries(frequency).map(([option, count]) => ({
+        option,
+        count,
+        percentage: ((count / questionResponses.length) * 100).toFixed(1)
+      }));
+    }
+
+    if (question.type === 'scale') {
+      const values = questionResponses.map(a => Number(a.value));
+      const avg = values.reduce((a, b) => a + b, 0) / values.length;
+      return { average: avg.toFixed(2), total: values.length };
+    }
+
+    return questionResponses.map(a => a.value);
+  };
+
+  const getSentimentColor = (sentiment) => {
+    if (!sentiment) return 'gray';
+    if (sentiment.overall === 'positive') return 'green';
+    if (sentiment.overall === 'negative') return 'red';
+    return 'yellow';
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center">
+            <div className="text-6xl mb-4 animate-spin">⚙️</div>
+            <p className="text-gray-600">Cargando resultados...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !survey) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center">
+            <div className="text-6xl mb-4">⚠️</div>
+            <p className="text-red-600 mb-4">{error}</p>
+            <button onClick={() => navigate('/surveys')} className="btn-primary">
+              Volver a encuestas
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       
-      <div className="container mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
+          <button
+            onClick={() => navigate('/surveys')}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4"
+          >
+            <ArrowLeft size={20} />
+            Volver a encuestas
+          </button>
+          
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                Resultados: Evaluación Docente Semestre 2024-2
-              </h1>
-              <p className="text-gray-600">
-                234 respuestas recibidas de 300 esperadas
-              </p>
+              <h1 className="text-3xl font-bold text-gray-800 mb-2">{survey?.title}</h1>
+              <p className="text-gray-600">{survey?.description}</p>
             </div>
-            <div className="flex gap-3">
-              <button className="btn-secondary flex items-center space-x-2">
-                <Download size={18} />
-                <span>Exportar CSV</span>
-              </button>
-              <button 
-                onClick={() => setShowAI(!showAI)}
-                className="btn-primary flex items-center space-x-2"
-              >
-                <Sparkles size={18} />
-                <span>Análisis con IA</span>
-              </button>
-            </div>
+            <button className="btn-secondary flex items-center gap-2">
+              <Download size={20} />
+              Exportar
+            </button>
           </div>
         </div>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm mb-1">Total Respuestas</p>
-                <p className="text-3xl font-bold text-gray-800">234</p>
-                <p className="text-sm text-green-600 mt-1">78% completado</p>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="card p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-primary-100 rounded-lg">
+                <Users className="text-primary-600" size={24} />
               </div>
-              <Users className="w-12 h-12 text-blue-500 opacity-20" />
+              <div>
+                <p className="text-sm text-gray-600">Total Respuestas</p>
+                <p className="text-2xl font-bold text-gray-800">{stats?.totalResponses || 0}</p>
+              </div>
             </div>
           </div>
-          
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm mb-1">Promedio General</p>
-                <p className="text-3xl font-bold text-gray-800">4.3/5</p>
-                <p className="text-sm text-green-600 mt-1">+0.3 vs anterior</p>
-              </div>
-              <TrendingUp className="w-12 h-12 text-green-500 opacity-20" />
-            </div>
-          </div>
-          
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm mb-1">Sentimiento IA</p>
-                <p className="text-3xl font-bold text-green-600">Positivo</p>
-                <p className="text-sm text-gray-600 mt-1">85% satisfacción</p>
-              </div>
-              <Sparkles className="w-12 h-12 text-purple-500 opacity-20" />
-            </div>
-          </div>
-        </div>
 
-        {/* AI Insights Card (Conditional) */}
-        {showAI && (
-          <div className="card mb-8 border-2 border-purple-200 bg-purple-50">
-            <div className="flex items-center gap-3 mb-4">
-              <Sparkles className="text-purple-600" size={24} />
-              <h2 className="text-2xl font-bold text-gray-800">
-                Análisis con Inteligencia Artificial
-              </h2>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-semibold text-gray-700 mb-2">Sentimiento General:</h3>
-                <div className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-4 py-2 rounded-lg font-semibold">
-                  {aiInsights.sentiment}
-                </div>
+          <div className="card p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-green-100 rounded-lg">
+                <TrendingUp className="text-green-600" size={24} />
               </div>
-
               <div>
-                <h3 className="font-semibold text-gray-700 mb-2">Resumen Automático:</h3>
-                <p className="text-gray-700 bg-white p-4 rounded-lg">
-                  {aiInsights.summary}
+                <p className="text-sm text-gray-600">Tasa de Respuesta</p>
+                <p className="text-2xl font-bold text-gray-800">
+                  {stats?.responseRate?.toFixed(1) || 'N/A'}%
                 </p>
               </div>
+            </div>
+          </div>
 
+          <div className="card p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-purple-100 rounded-lg">
+                <Calendar className="text-purple-600" size={24} />
+              </div>
               <div>
-                <h3 className="font-semibold text-gray-700 mb-2">Patrones Detectados:</h3>
-                <ul className="space-y-2">
-                  {aiInsights.patterns.map((pattern, index) => (
-                    <li key={index} className="flex items-start gap-2 bg-white p-3 rounded-lg">
-                      <span className="text-purple-600 font-bold">•</span>
-                      <span className="text-gray-700">{pattern}</span>
-                    </li>
-                  ))}
-                </ul>
+                <p className="text-sm text-gray-600">Última Respuesta</p>
+                <p className="text-sm font-semibold text-gray-800">
+                  {stats?.latestResponse ? new Date(stats.latestResponse).toLocaleDateString() : 'N/A'}
+                </p>
               </div>
             </div>
+          </div>
+
+          <div className="card p-6">
+            <button
+              onClick={handleAIAnalysis}
+              disabled={loadingAI || responses.length === 0}
+              className="w-full h-full flex flex-col items-center justify-center gap-2 hover:bg-gradient-to-br hover:from-primary-50 hover:to-purple-50 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <div className="p-3 bg-gradient-to-br from-primary-500 to-purple-500 rounded-lg">
+                <Brain className="text-white" size={24} />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-semibold text-gray-800">
+                  {loadingAI ? 'Analizando...' : 'Análisis IA'}
+                </p>
+                <p className="text-xs text-gray-600">
+                  {loadingAI ? '⏳' : 'Generar insights'}
+                </p>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* AI Analysis Section */}
+        {aiAnalysis && (
+          <div className="mb-8 card p-6 bg-gradient-to-br from-primary-50 to-purple-50 border-2 border-primary-200">
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles className="text-primary-600" size={24} />
+              <h2 className="text-xl font-bold text-gray-800">Análisis con IA</h2>
+            </div>
+
+            {/* Summary */}
+            <div className="mb-6">
+              <h3 className="font-semibold text-gray-700 mb-2">📊 Resumen General</h3>
+              <p className="text-gray-700">{aiAnalysis.summary}</p>
+            </div>
+
+            {/* Sentiment */}
+            {aiAnalysis.sentiment && (
+              <div className="mb-6 p-4 bg-white rounded-lg">
+                <h3 className="font-semibold text-gray-700 mb-2">💭 Análisis de Sentimiento</h3>
+                <div className="flex items-center gap-4 mb-2">
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold bg-${getSentimentColor(aiAnalysis.sentiment)}-100 text-${getSentimentColor(aiAnalysis.sentiment)}-700`}>
+                    {aiAnalysis.sentiment.overall.toUpperCase()}
+                  </span>
+                  <span className="text-2xl font-bold text-gray-800">
+                    {aiAnalysis.sentiment.score}/100
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600">{aiAnalysis.sentiment.explanation}</p>
+              </div>
+            )}
+
+            {/* Key Insights */}
+            <div className="mb-6">
+              <h3 className="font-semibold text-gray-700 mb-3">💡 Insights Clave</h3>
+              <ul className="space-y-2">
+                {aiAnalysis.keyInsights?.map((insight, index) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <span className="text-primary-600 font-bold">•</span>
+                    <span className="text-gray-700">{insight}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Recommendations */}
+            <div>
+              <h3 className="font-semibold text-gray-700 mb-3">🎯 Recomendaciones</h3>
+              <ul className="space-y-2">
+                {aiAnalysis.recommendations?.map((rec, index) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <span className="text-green-600 font-bold">✓</span>
+                    <span className="text-gray-700">{rec}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <p className="text-xs text-gray-500 mt-4 text-right">
+              Generado el {new Date(aiAnalysis.generatedAt).toLocaleString()}
+            </p>
           </div>
         )}
 
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Bar Chart */}
-          <div className="card">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">
-              Pregunta 1: ¿Cómo calificarías la metodología?
-            </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={barData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" fill="#667eea" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+        {/* Questions Results */}
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold text-gray-800">Resultados por Pregunta</h2>
+          
+          {survey?.questions.map((question, index) => {
+            const questionStats = calculateQuestionStats(question);
+            
+            return (
+              <div key={question._id} className="card p-6">
+                <h3 className="font-semibold text-gray-800 mb-4">
+                  {index + 1}. {question.text}
+                </h3>
 
-          {/* Pie Chart */}
-          <div className="card">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">
-              Distribución de Satisfacción General
-            </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Responses Table */}
-        <div className="card">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">
-            Respuestas Individuales
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b-2 border-gray-200">
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Fecha</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">P1: Metodología</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">P2: Claridad (1-5)</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">P3: Comentarios</th>
-                </tr>
-              </thead>
-              <tbody>
-                {responses.map((response) => (
-                  <tr key={response.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 text-gray-600 text-sm">
-                      {response.date}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
-                        {response.q1}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-gray-700">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">{response.q2}</span>
-                        <div className="flex">
-                          {[...Array(5)].map((_, i) => (
-                            <span key={i} className={i < response.q2 ? 'text-yellow-400' : 'text-gray-300'}>
-                              ★
-                            </span>
-                          ))}
+                {question.type === 'multiple' && Array.isArray(questionStats) && (
+                  <div className="space-y-3">
+                    {questionStats.map((stat, i) => (
+                      <div key={i}>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm text-gray-700">{stat.option}</span>
+                          <span className="text-sm font-semibold text-gray-800">
+                            {stat.count} ({stat.percentage}%)
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-primary-500 h-2 rounded-full transition-all"
+                            style={{ width: `${stat.percentage}%` }}
+                          />
                         </div>
                       </div>
-                    </td>
-                    <td className="py-3 px-4 text-gray-600 text-sm max-w-xs truncate">
-                      {response.q3}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-4 text-center">
-            <button className="text-primary-600 hover:text-primary-700 font-medium">
-              Ver todas las respuestas (234) →
-            </button>
-          </div>
+                    ))}
+                  </div>
+                )}
+
+                {question.type === 'scale' && questionStats.average && (
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <p className="text-3xl font-bold text-primary-600">{questionStats.average}</p>
+                    <p className="text-sm text-gray-600">Promedio de {questionStats.total} respuestas</p>
+                  </div>
+                )}
+
+                {question.type === 'text' && Array.isArray(questionStats) && (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {questionStats.map((text, i) => (
+                      <div key={i} className="p-3 bg-gray-50 rounded-lg">
+                        <p className="text-sm text-gray-700">"{text}"</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -252,3 +336,6 @@ const SurveyResults = () => {
 };
 
 export default SurveyResults;
+
+
+

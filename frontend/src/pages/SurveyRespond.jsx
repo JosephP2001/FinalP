@@ -7,26 +7,44 @@ import { responseService } from '../services/responseService';
 const SurveyRespond = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  
   const [survey, setSurvey] = useState(null);
   const [answers, setAnswers] = useState({});
-  const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    fetchSurvey();
+    loadSurvey();
   }, [id]);
 
-  const fetchSurvey = async () => {
+  const loadSurvey = async () => {
     try {
       setLoading(true);
-      const response = await surveyService.getSurvey(id);
-      setSurvey(response.data);
+      const data = await surveyService.getSurvey(id);
+      setSurvey(data.data);
+
+      // (Active Survey?) verification
+      if (data.data.status !== 'active') {
+        setError('Esta encuesta no está disponible actualmente');
+      }
+
+      // Date verification
+      const now = new Date();
+      if (data.data.settings?.startDate && new Date(data.data.settings.startDate) > now) {
+        setError('Esta encuesta aún no ha comenzado');
+      }
+      if (data.data.settings?.endDate && new Date(data.data.settings.endDate) < now) {
+        setError('Esta encuesta ha finalizado');
+      }
+
+      // (# Responses limit ) Validation
+      if (data.data.settings?.maxResponses && data.data.responseCount >= data.data.settings.maxResponses) {
+        setError('Esta encuesta ha alcanzado el límite de respuestas');
+      }
+
     } catch (err) {
-      console.error('Error fetching survey:', err);
-      setError('No se pudo cargar la encuesta');
+      setError(err.response?.data?.message || 'Error al cargar la encuesta');
     } finally {
       setLoading(false);
     }
@@ -40,92 +58,188 @@ const SurveyRespond = () => {
   };
 
   const validateAnswers = () => {
-    if (!survey) return false;
-    
-    for (const question of survey.questions) {
-      if (question.required && !answers[question._id]) {
-        setError(`La pregunta "${question.text}" es obligatoria`);
-        return false;
-      }
+    // (MANDATORY Questions) Validation
+    const requiredQuestions = survey.questions.filter(q => q.required);
+    const missingAnswers = requiredQuestions.filter(q => !answers[q._id] || answers[q._id] === '');
+
+    if (missingAnswers.length > 0) {
+      return `Por favor responde todas las preguntas obligatorias (${missingAnswers.length} faltantes)`;
     }
-    
-    return true;
+
+    return null;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    
-    if (!validateAnswers()) {
+
+    // Validation
+    const validationError = validateAnswers();
+    if (validationError) {
+      setError(validationError);
       return;
     }
-    
+
     try {
       setSubmitting(true);
-      
-      const answersArray = Object.entries(answers).map(([questionId, value]) => ({
+      setError('');
+
+      // Format Responses
+      const formattedAnswers = Object.entries(answers).map(([questionId, value]) => ({
         questionId,
         value
       }));
-      
-      await responseService.submitResponse(id, answersArray);
-      
-      setSubmitted(true);
-      
+
+      // Send Response
+      await responseService.submitResponse(id, formattedAnswers);
+
+      setSuccess(true);
+
+      // Redirect after 3s
+      setTimeout(() => {
+        navigate('/');
+      }, 3000);
+
     } catch (err) {
-      console.error('Error submitting response:', err);
       setError(err.response?.data?.message || 'Error al enviar respuesta');
     } finally {
       setSubmitting(false);
     }
   };
 
+  const renderQuestion = (question, index) => {
+    const questionId = question._id;
+
+    switch (question.type) {
+      case 'text':
+        return (
+          <textarea
+            className="input-field"
+            rows="4"
+            placeholder="Escribe tu respuesta aquí..."
+            value={answers[questionId] || ''}
+            onChange={(e) => handleAnswerChange(questionId, e.target.value)}
+            required={question.required}
+          />
+        );
+
+      case 'multiple':
+        return (
+          <div className="space-y-2">
+            {question.options?.map((option, optIndex) => (
+              <label
+                key={optIndex}
+                className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+              >
+                <input
+                  type="radio"
+                  name={`question-${questionId}`}
+                  value={option}
+                  checked={answers[questionId] === option}
+                  onChange={(e) => handleAnswerChange(questionId, e.target.value)}
+                  className="w-4 h-4 text-primary-600 mr-3"
+                  required={question.required}
+                />
+                <span className="text-gray-700">{option}</span>
+              </label>
+            ))}
+          </div>
+        );
+
+      case 'scale':
+        return (
+          <div className="space-y-4">
+            <div className="flex justify-between text-sm text-gray-600 mb-2">
+              <span>1 (Muy malo)</span>
+              <span>10 (Excelente)</span>
+            </div>
+            <div className="flex gap-2 justify-between">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => handleAnswerChange(questionId, num)}
+                  className={`w-12 h-12 rounded-lg font-semibold transition-all ${
+                    answers[questionId] === num
+                      ? 'bg-primary-500 text-white scale-110 shadow-lg'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {num}
+                </button>
+              ))}
+            </div>
+            <div className="text-center text-sm text-gray-600 mt-2">
+              {answers[questionId] ? `Seleccionado: ${answers[questionId]}` : 'Selecciona una puntuación'}
+            </div>
+          </div>
+        );
+
+      case 'date':
+        return (
+          <input
+            type="date"
+            className="input-field"
+            value={answers[questionId] || ''}
+            onChange={(e) => handleAnswerChange(questionId, e.target.value)}
+            required={question.required}
+          />
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center">
-        <div className="text-white text-xl">Loading survey...</div>
-      </div>
-    );
-  }
-
-  if (error && !survey) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-md w-full text-center">
-          <AlertCircle className="w-20 h-20 text-red-500 mx-auto mb-4" />
+          <div className="text-6xl mb-4 animate-spin">⚙️</div>
           <h2 className="text-2xl font-bold text-gray-800 mb-4">
-            Error
+            Cargando encuesta...
           </h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button 
-            onClick={() => navigate('/')}
-            className="btn-primary w-full"
-          >
-            Go back to main page
-          </button>
+          <p className="text-gray-600">Por favor espera</p>
         </div>
       </div>
     );
   }
 
-  if (submitted) {
+  // Success state
+  if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-md w-full text-center">
-          <div className="mb-6">
-            <CheckCircle className="w-20 h-20 text-green-500 mx-auto" />
-          </div>
+          <CheckCircle className="mx-auto text-green-500 mb-4" size={80} />
           <h2 className="text-3xl font-bold text-gray-800 mb-4">
-            ¡Thanks for your Responses!
+            ¡Gracias por tu respuesta!
           </h2>
-          <p className="text-gray-600 mb-8">
-            Your responses have been submmited.
+          <p className="text-gray-600 mb-6">
+            Tu participación ha sido registrada exitosamente.
           </p>
-          <button 
+          <div className="text-sm text-gray-500">
+            Redirigiendo en 3 segundos...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error && !survey) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-md w-full text-center">
+          <AlertCircle className="mx-auto text-red-500 mb-4" size={80} />
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">
+            Encuesta no disponible
+          </h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
             onClick={() => navigate('/')}
-            className="btn-primary w-full"
+            className="btn-primary"
           >
-            Finish
+            Volver al inicio
           </button>
         </div>
       </div>
@@ -134,140 +248,91 @@ const SurveyRespond = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-500 to-secondary-500 py-12 px-4">
-      <div className="max-w-3xl mx-auto">
-        {/* Header Card */}
-        <div className="bg-white rounded-xl shadow-lg p-8 mb-6">
-          <div className="text-center mb-2">
-            <div className="text-5xl mb-4">📊</div>
+      <div className="container mx-auto max-w-3xl">
+        {/* Header */}
+        <div className="bg-white rounded-t-2xl shadow-2xl p-8 border-b-4 border-primary-500">
+          <div className="text-center">
+            <div className="text-6xl mb-4">📊</div>
             <h1 className="text-3xl font-bold text-gray-800 mb-3">
-              {survey?.title}
+              {survey.title}
             </h1>
-            {survey?.description && (
-              <p className="text-gray-600">
+            {survey.description && (
+              <p className="text-gray-600 text-lg">
                 {survey.description}
               </p>
             )}
           </div>
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm text-blue-800">
-              <strong>Nota:</strong> Esta encuesta es anónima. Tus respuestas serán confidenciales.
-            </p>
+
+          {/* Survey Info */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <div className="flex justify-center gap-6 text-sm text-gray-600">
+              <span>📝 {survey.questions?.length} preguntas</span>
+              <span>👤 Anónimo</span>
+              {survey.settings?.maxResponses && (
+                <span>
+                  📊 {survey.responseCount || 0} / {survey.settings.maxResponses} respuestas
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-700">{error}</p>
-          </div>
-        )}
-
-        {/* Questions Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {survey?.questions.map((question, index) => (
-            <div key={question._id} className="bg-white rounded-xl shadow-lg p-6">
-              {/* Question Header */}
-              <div className="mb-4">
-                <div className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-8 h-8 bg-primary-500 text-white rounded-full flex items-center justify-center font-bold">
-                    {index + 1}
-                  </span>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-800">
-                      {question.text}
-                      {question.required && (
-                        <span className="text-red-500 ml-1">*</span>
-                      )}
-                    </h3>
-                  </div>
-                </div>
-              </div>
-
-              {/* Multiple Choice */}
-              {question.type === 'multiple' && (
-                <div className="space-y-3 ml-11">
-                  {question.options.map((option, optIndex) => (
-                    <label 
-                      key={optIndex}
-                      className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                    >
-                      <input
-                        type="radio"
-                        name={`question-${question._id}`}
-                        value={option}
-                        onChange={(e) => handleAnswerChange(question._id, e.target.value)}
-                        required={question.required}
-                        className="w-5 h-5 text-primary-600"
-                      />
-                      <span className="text-gray-700">{option}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-
-              {/* Scale */}
-              {question.type === 'scale' && (
-                <div className="ml-11">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-600">
-                      Muy en desacuerdo
-                    </span>
-                    <span className="text-sm text-gray-600">
-                      Muy de acuerdo
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    {[...Array(5)].map((_, i) => (
-                      <label
-                        key={i}
-                        className="flex-1 text-center cursor-pointer"
-                      >
-                        <input
-                          type="radio"
-                          name={`question-${question._id}`}
-                          value={i + 1}
-                          onChange={(e) => handleAnswerChange(question._id, e.target.value)}
-                          required={question.required}
-                          className="sr-only peer"
-                        />
-                        <div className="w-full py-3 border-2 border-gray-300 rounded-lg peer-checked:border-primary-500 peer-checked:bg-primary-500 peer-checked:text-white hover:border-primary-400 transition-all">
-                          <span className="font-semibold">{i + 1}</span>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Text Input */}
-              {question.type === 'text' && (
-                <div className="ml-11">
-                  <textarea
-                    rows="4"
-                    placeholder="Escribe tu respuesta aquí..."
-                    className="input-field"
-                    onChange={(e) => handleAnswerChange(question._id, e.target.value)}
-                    required={question.required}
-                  />
-                </div>
-              )}
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="bg-white rounded-b-2xl shadow-2xl p-8">
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
+              <AlertCircle size={20} />
+              <span className="text-sm">{error}</span>
             </div>
-          ))}
+          )}
+
+          {/* Questions */}
+          <div className="space-y-8">
+            {survey.questions?.map((question, index) => (
+              <div key={question._id} className="pb-6 border-b border-gray-200 last:border-b-0">
+                <label className="block mb-4">
+                  <span className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                    <span className="text-primary-600">{index + 1}.</span>
+                    {question.text}
+                    {question.required && (
+                      <span className="text-red-500 text-sm">*</span>
+                    )}
+                  </span>
+                </label>
+                {renderQuestion(question, index)}
+              </div>
+            ))}
+          </div>
+
+          {/* Required Notice */}
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg text-sm text-gray-600">
+            <span className="text-red-500">*</span> Campos obligatorios
+          </div>
 
           {/* Submit Button */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="mt-8">
             <button
               type="submit"
               disabled={submitting}
-              className="btn-primary w-full py-4 text-lg"
+              className="w-full btn-primary py-4 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {submitting ? 'Enviando...' : 'Enviar Respuestas'}
+              {submitting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <div className="animate-spin">⚙️</div>
+                  Enviando...
+                </span>
+              ) : (
+                '✓ Enviar Respuesta'
+              )}
             </button>
-            <p className="text-center text-sm text-gray-500 mt-3">
-              Al enviar, aceptas que tus respuestas sean procesadas de forma anónima
-            </p>
           </div>
         </form>
+
+        {/* Footer */}
+        <div className="text-center mt-6 text-white text-sm opacity-80">
+          <p>Universidad Central del Ecuador - Sistema de Encuestas</p>
+        </div>
       </div>
     </div>
   );

@@ -33,5 +33,12 @@ export const surveyService = {
   async deleteSurvey(id) {
     const response = await api.delete(`/surveys/${id}`);
     return response.data;
+  },
+
+  // Get AI analysis of survey
+  async getAIAnalysis(id) {
+    const response = await api.get(`/surveys/${id}/ai-analysis`);
+    return response.data;
   }
+
 };

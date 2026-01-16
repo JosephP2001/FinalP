@@ -1,7 +1,7 @@
 import api from './api';
 
 export const responseService = {
-  
+  // Submit response -> survey
   async submitResponse(surveyId, answers) {
     const response = await api.post('/responses', {
       surveyId,

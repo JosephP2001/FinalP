@@ -1,127 +1,113 @@
+/*Rebuilded (DONE)
+*Real Stadistics from MongoDB
+*/
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
-import { FileText, CheckCircle, TrendingUp, Plus } from 'lucide-react';
+import { BarChart3, Users, FileText, TrendingUp, Eye, Plus } from 'lucide-react';
 import { surveyService } from '../services/surveyService';
 import { authService } from '../services/authService';
 
 const Dashboard = () => {
-  const [surveys, setSurveys] = useState([]);
   const [stats, setStats] = useState({
     totalSurveys: 0,
+    activeSurveys: 0,
     totalResponses: 0,
-    responseRate: 0
+    avgResponseRate: 0
   });
+  const [recentSurveys, setRecentSurveys] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  
-  const user = authService.getCurrentUser();
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    fetchDashboardData();
+    loadDashboardData();
   }, []);
 
-  const fetchDashboardData = async () => {
+  const loadDashboardData = async () => {
     try {
       setLoading(true);
       
-      // Obtener encuestas del usuario
-      const response = await surveyService.getMySurveys();
-      const surveysData = response.data || [];
+      // Obtener usuario actual
+      const currentUser = authService.getCurrentUser();
+      setUser(currentUser);
+
+      // Obtener todas las encuestas del usuario
+      const { data: surveys } = await surveyService.getMySurveys();
+
+      // Calcular estadísticas
+      const totalSurveys = surveys.length;
+      const activeSurveys = surveys.filter(s => s.status === 'active').length;
+      const totalResponses = surveys.reduce((sum, s) => sum + (s.responseCount || 0), 0);
       
-      setSurveys(surveysData);
-      
-      // Calcular estadísticas reales
-      const totalResponses = surveysData.reduce(
-        (sum, survey) => sum + (survey.responseCount || 0), 
-        0
-      );
-      
-      const activeSurveys = surveysData.filter(s => s.status === 'active').length;
-      
-      const totalMaxResponses = surveysData.reduce(
-        (sum, survey) => sum + (survey.settings?.maxResponses || 100),
-        0
-      );
-      
-      const responseRate = totalMaxResponses > 0 
-        ? Math.round((totalResponses / totalMaxResponses) * 100)
+      // Calcular tasa promedio de respuesta
+      const surveysWithMax = surveys.filter(s => s.settings?.maxResponses);
+      const avgResponseRate = surveysWithMax.length > 0
+        ? surveysWithMax.reduce((sum, s) => {
+            const rate = (s.responseCount / s.settings.maxResponses) * 100;
+            return sum + rate;
+          }, 0) / surveysWithMax.length
         : 0;
 
       setStats({
-        totalSurveys: surveysData.length,
+        totalSurveys,
         activeSurveys,
         totalResponses,
-        responseRate
+        avgResponseRate: Math.round(avgResponseRate)
       });
-      
-    } catch (err) {
-      console.error('Error fetching dashboard data:', err);
-      setError('Error al cargar el dashboard');
+
+      // Obtener encuestas recientes (últimas 5)
+      setRecentSurveys(surveys.slice(0, 5));
+
+    } catch (error) {
+      console.error('Error loading dashboard:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Buenos días';
+    if (hour < 18) return 'Buenas tardes';
+    return 'Buenas noches';
+  };
+
+  const getTimeAgo = (date) => {
+    const now = new Date();
+    const created = new Date(date);
+    const diffMs = now - created;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Hoy';
+    if (diffDays === 1) return 'Ayer';
+    if (diffDays < 7) return `Hace ${diffDays} días`;
+    return `Hace ${Math.floor(diffDays / 7)} semanas`;
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="container mx-auto px-6 py-8">
-          <div className="flex justify-center items-center h-64">
-            <div className="text-xl text-gray-600">Cargando...</div>
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center">
+            <div className="text-6xl mb-4 animate-spin">⚙️</div>
+            <p className="text-gray-600">Cargando dashboard...</p>
           </div>
         </div>
       </div>
     );
   }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <div className="container mx-auto px-6 py-8">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-            {error}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const statsCards = [
-    { 
-      icon: FileText, 
-      label: 'Total Encuestas', 
-      value: stats.totalSurveys.toString(), 
-      subtext: `${stats.activeSurveys} activas`,
-      color: 'bg-blue-500' 
-    },
-    { 
-      icon: CheckCircle, 
-      label: 'Respuestas Totales', 
-      value: stats.totalResponses.toString(), 
-      subtext: 'Respuestas recibidas',
-      color: 'bg-green-500' 
-    },
-    { 
-      icon: TrendingUp, 
-      label: 'Tasa de Respuesta', 
-      value: `${stats.responseRate}%`, 
-      subtext: 'Del total esperado',
-      color: 'bg-purple-500' 
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       
       <div className="container mx-auto px-6 py-8">
-        {/* Header */}
+        {/* Welcome Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Bienvenido, {user?.name || 'Usuario'} 👋
+            {getGreeting()}, {user?.name?.split(' ')[0] || 'Usuario'} 👋
           </h1>
           <p className="text-gray-600">
             Aquí está el resumen de tus encuestas
@@ -129,110 +115,146 @@ const Dashboard = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {statsCards.map((stat, index) => (
-            <div key={index} className="card">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`p-3 rounded-lg ${stat.color} bg-opacity-10`}>
-                  <stat.icon className={`${stat.color.replace('bg-', 'text-')} w-6 h-6`} />
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Total Surveys */}
+          <div className="card p-6 hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Total Encuestas</p>
+                <p className="text-3xl font-bold text-gray-800">{stats.totalSurveys}</p>
               </div>
-              <h3 className="text-gray-600 text-sm font-medium mb-1">{stat.label}</h3>
-              <p className="text-3xl font-bold text-gray-800 mb-1">{stat.value}</p>
-              <p className="text-sm text-gray-500">{stat.subtext}</p>
+              <div className="p-4 bg-primary-100 rounded-full">
+                <FileText className="text-primary-600" size={28} />
+              </div>
             </div>
-          ))}
+            <div className="mt-4 text-sm text-gray-500">
+              {stats.activeSurveys} activas
+            </div>
+          </div>
+
+          {/* Active Surveys */}
+          <div className="card p-6 hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Encuestas Activas</p>
+                <p className="text-3xl font-bold text-green-600">{stats.activeSurveys}</p>
+              </div>
+              <div className="p-4 bg-green-100 rounded-full">
+                <TrendingUp className="text-green-600" size={28} />
+              </div>
+            </div>
+            <div className="mt-4 text-sm text-gray-500">
+              Recopilando respuestas
+            </div>
+          </div>
+
+          {/* Total Responses */}
+          <div className="card p-6 hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Total Respuestas</p>
+                <p className="text-3xl font-bold text-purple-600">{stats.totalResponses}</p>
+              </div>
+              <div className="p-4 bg-purple-100 rounded-full">
+                <Users className="text-purple-600" size={28} />
+              </div>
+            </div>
+            <div className="mt-4 text-sm text-gray-500">
+              Datos recopilados
+            </div>
+          </div>
+
+          {/* Average Response Rate */}
+          <div className="card p-6 hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Tasa Promedio</p>
+                <p className="text-3xl font-bold text-blue-600">{stats.avgResponseRate}%</p>
+              </div>
+              <div className="p-4 bg-blue-100 rounded-full">
+                <BarChart3 className="text-blue-600" size={28} />
+              </div>
+            </div>
+            <div className="mt-4 text-sm text-gray-500">
+              De completitud
+            </div>
+          </div>
         </div>
 
-        {/* Recent Surveys Section */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">Encuestas Recientes</h2>
+        {/* Quick Actions */}
+        <div className="card p-6 mb-8">
+          <h2 className="text-xl font-bold text-gray-800 mb-4">Acciones Rápidas</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Link to="/surveys/create">
-              <button className="btn-primary flex items-center space-x-2">
+              <button className="w-full btn-primary flex items-center justify-center space-x-2 py-3">
                 <Plus size={20} />
                 <span>Nueva Encuesta</span>
               </button>
             </Link>
+            <Link to="/surveys">
+              <button className="w-full btn-secondary flex items-center justify-center space-x-2 py-3">
+                <FileText size={20} />
+                <span>Ver Todas</span>
+              </button>
+            </Link>
+            <button className="w-full btn-secondary flex items-center justify-center space-x-2 py-3">
+              <BarChart3 size={20} />
+              <span>Estadísticas</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Recent Surveys */}
+        <div className="card p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-gray-800">Encuestas Recientes</h2>
+            <Link to="/surveys" className="text-primary-600 hover:text-primary-700 text-sm font-semibold">
+              Ver todas →
+            </Link>
           </div>
 
-          {surveys.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">📊</div>
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                No tienes encuestas aún
-              </h3>
-              <p className="text-gray-500 mb-6">
-                Crea tu primera encuesta para comenzar a recolectar datos
-              </p>
+          {recentSurveys.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-6xl mb-4">📋</div>
+              <p className="text-gray-600 mb-4">Aún no tienes encuestas</p>
               <Link to="/surveys/create">
-                <button className="btn-primary">
-                  Crear Primera Encuesta
-                </button>
+                <button className="btn-primary">Crear tu primera encuesta</button>
               </Link>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Título</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Estado</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Respuestas</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Fecha</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {surveys.slice(0, 5).map((survey) => {
-                    const maxResponses = survey.settings?.maxResponses || 100;
-                    const percentage = Math.round((survey.responseCount / maxResponses) * 100);
-                    
-                    return (
-                      <tr key={survey._id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-4 px-4">
-                          <span className="font-medium text-gray-800">{survey.title}</span>
-                        </td>
-                        <td className="py-4 px-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            survey.status === 'active' 
-                              ? 'bg-green-100 text-green-700' 
-                              : survey.status === 'draft'
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-gray-100 text-gray-700'
-                          }`}>
-                            {survey.status === 'active' ? 'Activa' : 
-                             survey.status === 'draft' ? 'Borrador' : 'Cerrada'}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4">
-                          <div>
-                            <span className="text-gray-800 font-medium">
-                              {survey.responseCount || 0} / {maxResponses}
-                            </span>
-                            <div className="w-32 bg-gray-200 rounded-full h-2 mt-1">
-                              <div 
-                                className="bg-primary-500 h-2 rounded-full" 
-                                style={{ width: `${Math.min(percentage, 100)}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-4 px-4 text-gray-600">
-                          {new Date(survey.createdAt).toLocaleDateString('es-ES')}
-                        </td>
-                        <td className="py-4 px-4">
-                          <Link to={`/surveys/${survey._id}/results`}>
-                            <button className="text-primary-600 hover:text-primary-700 font-medium">
-                              Ver
-                            </button>
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="space-y-3">
+              {recentSurveys.map((survey) => (
+                <div 
+                  key={survey._id} 
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-1">
+                      <h3 className="font-semibold text-gray-800">{survey.title}</h3>
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        survey.status === 'active' 
+                          ? 'bg-green-100 text-green-700' 
+                          : survey.status === 'closed'
+                          ? 'bg-gray-100 text-gray-700'
+                          : 'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {survey.status === 'active' ? 'Activa' : survey.status === 'closed' ? 'Cerrada' : 'Borrador'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                      <span>📊 {survey.responseCount || 0} respuestas</span>
+                      <span>📝 {survey.questions?.length || 0} preguntas</span>
+                      <span>🕒 {getTimeAgo(survey.createdAt)}</span>
+                    </div>
+                  </div>
+                  <Link to={`/surveys/${survey._id}/results`}>
+                    <button className="btn-secondary flex items-center space-x-2">
+                      <Eye size={18} />
+                      <span>Ver</span>
+                    </button>
+                  </Link>
+                </div>
+              ))}
             </div>
           )}
         </div>
