@@ -1,13 +1,13 @@
+# Abre el .gitignore en la raíz y asegúrate de que tiene:
+
 # Environment variables - CRÍTICO
 .env
 .env.*
 !.env.example
 *.env
-backend/.env
-frontend/.env
 
 # Dependencies
-node_modules
+node_modules/
 */node_modules/
 
 # Logs
@@ -20,9 +20,9 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # Build outputs
-dist
-dist-ssr
-build
+dist/
+dist-ssr/
+build/
 *.local
 
 # Editor directories and files
@@ -47,3 +47,12 @@ secrets/
 # Database local
 data/
 *.db
+
+# Backend specific
+backend/data/
+backend/logs/
+backend/temp/
+
+# Frontend specific
+frontend/.env.local
+frontend/.env.*.local
