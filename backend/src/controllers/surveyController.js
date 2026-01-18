@@ -1,21 +1,14 @@
-/*
-*Added: IA analysis (DONE)
-*Added: Fallback (DONE)
-*Added: Error Handling (-->IA) (DONE)
-*/ 
-
-
-
 import Survey from '../models/Survey.js';
 import Response from '../models/Response.js';
-import { analyzeSurveyResponses, generateQuickSummary } from '../services/aiService.js';
+import { getAIAnalysis as getGroqAnalysis } from '../services/aiService.js';
 
-// @desc    Get all surveys
+// @desc    Get all surveys (public)
 // @route   GET /api/surveys
 // @access  Public
 export const getSurveys = async (req, res) => {
   try {
-    const surveys = await Survey.find({ status: { $ne: 'draft' } })
+    const surveys = await Survey.find({ status: 'active' })
+      .select('-questions')
       .populate('creator', 'name email')
       .sort({ createdAt: -1 });
 
@@ -59,9 +52,28 @@ export const getSurvey = async (req, res) => {
   }
 };
 
+// @desc    Get my surveys
+// @route   GET /api/surveys/my/surveys
+// @access  Private
+export const getMySurveys = async (req, res) => {
+  try {
+    const surveys = await Survey.find({ creator: req.user.id })
+      .sort({ createdAt: -1 });
 
-//----------CRUD-----------------CRUD------------CRUD----------------CRUD--------
-// @desc    Create survey
+    res.status(200).json({
+      success: true,
+      count: surveys.length,
+      data: surveys
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// @desc    Create new survey
 // @route   POST /api/surveys
 // @access  Private
 export const createSurvey = async (req, res) => {
@@ -100,7 +112,7 @@ export const updateSurvey = async (req, res) => {
       });
     }
 
-    // Verify: User === Creator????
+    // Ownership verification
     if (survey.creator.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -141,7 +153,7 @@ export const deleteSurvey = async (req, res) => {
       });
     }
 
-    // Verify: User === Creator????
+    // Ownership verification
     if (survey.creator.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -163,31 +175,9 @@ export const deleteSurvey = async (req, res) => {
   }
 };
 
-// @desc    Get user's surveys
-// @route   GET /api/surveys/my/surveys
-// @access  Private
-export const getMySurveys = async (req, res) => {
-  try {
-    const surveys = await Survey.find({ creator: req.user.id })
-      .sort({ createdAt: -1 });
-
-    res.status(200).json({
-      success: true,
-      count: surveys.length,
-      data: surveys
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
-
 // @desc    Get AI analysis of survey responses
 // @route   GET /api/surveys/:id/ai-analysis
 // @access  Private
-//Search-Verify-Get-Validate--Generate-Return
 export const getAIAnalysis = async (req, res) => {
   try {
     const survey = await Survey.findById(req.params.id);
@@ -199,16 +189,16 @@ export const getAIAnalysis = async (req, res) => {
       });
     }
 
-    // Verify: User === Creator????
+    // Ownership verification
     if (survey.creator.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
-        message: 'Not authorized to view analysis'
+        message: 'Not authorized to view this analysis'
       });
     }
 
     // Get responses
-    const responses = await Response.find({ survey: req.params.id });
+    const responses = await Response.find({ surveyId: req.params.id });
 
     if (responses.length === 0) {
       return res.status(400).json({
@@ -217,16 +207,8 @@ export const getAIAnalysis = async (req, res) => {
       });
     }
 
-    // IA Analysis Generator
-    let analysis;
-    
-    if (process.env.GROQ_API_KEY) {  
-      // using Groq IA
-      analysis = await analyzeSurveyResponses(survey, responses);
-    } else {
-      // Fallback -> Basic Summary
-      analysis = generateQuickSummary(survey, responses);
-    }
+    // IA analisys generator
+    const analysis = await getGroqAnalysis(survey, responses);
 
     res.status(200).json({
       success: true,

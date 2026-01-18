@@ -6,17 +6,11 @@
  * @returns {Object} Complete analysis with insights 
  */
 
-
-
-export const analyzeSurveyResponses = async (survey, responses) => {
+export const getAIAnalysis = async (survey, responses) => {
   try {
-    // Data is prepared --> analysis
     const analysisData = prepareAnalysisData(survey, responses);
-    
-    // Create prompt --> IA
     const prompt = createAnalysisPrompt(analysisData);
     
-    // Groq API call
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -24,7 +18,7 @@ export const analyzeSurveyResponses = async (survey, responses) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile', //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        model: 'llama-3.3-70b-versatile',
         messages: [
           {
             role: 'system',
@@ -61,13 +55,9 @@ export const analyzeSurveyResponses = async (survey, responses) => {
     };
   } catch (error) {
     console.error('AI Analysis Error:', error);
-    // Fallback -> Basic analysis without IA
     return generateQuickSummary(survey, responses);
   }
 };
-
-
-//Survey's responses r prepared --> Analysis
 
 const prepareAnalysisData = (survey, responses) => {
   const questionAnalysis = survey.questions.map(question => {
@@ -93,7 +83,6 @@ const prepareAnalysisData = (survey, responses) => {
   };
 };
 
-// Optimized prompt --> Groq
 const createAnalysisPrompt = (data) => {
   return `Analiza los siguientes datos de una encuesta y proporciona insights valiosos.
 
@@ -130,7 +119,6 @@ Por favor, proporciona tu análisis en el siguiente formato JSON (SOLO JSON, sin
 }`;
 };
 
-// Answers formated according to "Question Type"
 const formatResponses = (responses, type) => {
   if (type === 'multiple') {
     const frequency = {};
@@ -149,24 +137,16 @@ const formatResponses = (responses, type) => {
   return '   ' + responses.join(', ');
 };
 
-
-// --> Parse  IA's Json response  
- 
 const parseAIResponse = (response) => {
   try {
-    // Cleaning any markdown code blocks  
     let cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    
-    //Searching JSON in the text if it is not clean
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       cleaned = jsonMatch[0];
     }
-    
     return JSON.parse(cleaned);
   } catch (error) {
     console.error('Error parsing AI response:', error);
-    // Fallback to "Basic analysis"
     return {
       summary: "Análisis generado automáticamente de las respuestas.",
       keyInsights: [
@@ -188,8 +168,6 @@ const parseAIResponse = (response) => {
   }
 };
 
- // Basic stadistic calculus
- 
 const calculateStatistics = (responses) => {
   const responsesByDay = {};
 
@@ -207,8 +185,6 @@ const calculateStatistics = (responses) => {
   };
 };
 
- // Quick summary generated without IA (fallback)
- 
 export const generateQuickSummary = (survey, responses) => {
   const totalQuestions = survey.questions.length;
   const multipleChoiceQuestions = survey.questions.filter(q => q.type === 'multiple').length;

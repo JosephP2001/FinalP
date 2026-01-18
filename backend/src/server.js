@@ -1,10 +1,14 @@
 import express from 'express';
-import cors from 'cors';
 import dotenv from 'dotenv';
+import cors from 'cors';
+import morgan from 'morgan';
 import session from 'express-session';
+import passport from './config/passport.js';
 import { connectDB } from './config/database.js';
 import { connectRedis } from './config/redis.js';
-import passport from './config/passport.js';
+import { startAutoClosureJob } from './services/surveyClosureService.js';
+
+// Routes
 import authRoutes from './routes/authRoutes.js';
 import surveyRoutes from './routes/surveyRoutes.js';
 import responseRoutes from './routes/responseRoutes.js';
@@ -12,68 +16,83 @@ import responseRoutes from './routes/responseRoutes.js';
 dotenv.config();
 
 const app = express();
+const PORT = process.env.PORT || 5000;
 
+// Middleware
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(morgan('dev'));
 
+// Session middleware (requerido para Passport)
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'secret',
+  secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000
+    maxAge: 24 * 60 * 60 * 1000, // 24 horas
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production'
   }
 }));
 
+// Inicializar Passport
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.get('/health', (req, res) => {
-  res.status(200).json({ 
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/surveys', surveyRoutes);
+app.use('/api/responses', responseRoutes);
+
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ 
     status: 'OK', 
     message: 'Survey API is running',
     timestamp: new Date().toISOString()
   });
 });
 
-app.use('/api/auth', authRoutes);
-app.use('/api/surveys', surveyRoutes);
-app.use('/api/responses', responseRoutes);
-
-app.use((req, res) => {
-  res.status(404).json({ 
-    success: false, 
-    message: 'Route not found' 
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route not found'
   });
 });
 
+// Error handler
 app.use((err, req, res, next) => {
   console.error('Error:', err);
   res.status(err.status || 500).json({
     success: false,
-    message: err.message || 'Internal Server Error'
+    message: err.message || 'Internal server error'
   });
 });
 
-const PORT = process.env.PORT || 5000;
-
+// Start server
 const startServer = async () => {
   try {
+    // Conectar a MongoDB
     await connectDB();
-    await connectRedis();
     
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
-      console.log(`✅ Health: http://localhost:${PORT}/health`);
+    // Conectar a Redis
+    await connectRedis();
+
+    // Iniciar cron job de cierre automático
+    startAutoClosureJob();
+
+    app.listen(PORT, () => {
+      console.log(` Server running on port ${PORT}`);
+      console.log(` Auto-closure cron job active`);
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    console.error(' Server startup error:', error);
     process.exit(1);
   }
 };

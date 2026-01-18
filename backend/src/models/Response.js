@@ -1,37 +1,58 @@
 import mongoose from 'mongoose';
 
-const answerSchema = new mongoose.Schema({
-  questionId: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true
-  },
-  value: {
-    type: mongoose.Schema.Types.Mixed,
-    required: true
-  }
-});
-
 const responseSchema = new mongoose.Schema({
-  survey: {
+  surveyId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Survey',
-    required: true
+    required: true,
+    index: true
   },
-  answers: [answerSchema],
-  metadata: {
-    ip: String,
-    userAgent: String,
-    submittedAt: {
-      type: Date,
-      default: Date.now
+  respondentEmail: {
+    type: String,
+    required: true,
+    lowercase: true,
+    trim: true,
+    validate: {
+      validator: function(v) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+      },
+      message: 'Email inválido'
     }
   },
-  isAnonymous: {
-    type: Boolean,
-    default: true
+  answers: [{
+    questionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true
+    },
+    value: {
+      type: mongoose.Schema.Types.Mixed,
+      required: true
+    }
+  }],
+  submittedAt: {
+    type: Date,
+    default: Date.now
+  },
+  ipAddress: {
+    type: String
+  },
+  userAgent: {
+    type: String
   }
 }, {
   timestamps: true
 });
+
+// ÍNDICE COMPUESTO: Evita respuestas duplicadas por email + encuesta
+responseSchema.index({ surveyId: 1, respondentEmail: 1 }, { unique: true });
+
+// MÉTODO: Verificar si un email ya respondió
+responseSchema.statics.hasResponded = async function(surveyId, email) {
+  const count = await this.countDocuments({
+    surveyId,
+    respondentEmail: email.toLowerCase()
+  });
+  return count > 0;
+};
 
 export default mongoose.model('Response', responseSchema);

@@ -1,72 +1,59 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Mail, Lock, AlertCircle } from 'lucide-react';
 import { authService } from '../services/authService';
+import { loginSchema, registerSchema } from '../schemas/authSchemas';
+import FormInput from '../components/common/FormInput';
+import FormSelect from '../components/common/FormSelect';
 
 const Login = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({ email: '', password: '' });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [isRegister, setIsRegister] = useState(false);
-  const [registerData, setRegisterData] = useState({ 
-    name: '', 
-    email: '', 
-    password: '', 
-    role: 'student' 
+  const [apiError, setApiError] = useState('');
+
+  // React Hook Form - Login
+  const {
+    register: registerLogin,
+    handleSubmit: handleSubmitLogin,
+    formState: { errors: loginErrors, isSubmitting: isLoginSubmitting }
+  } = useForm({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' }
   });
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+  // React Hook Form - Register
+  const {
+    register: registerForm,
+    handleSubmit: handleSubmitRegister,
+    formState: { errors: registerErrors, isSubmitting: isRegisterSubmitting }
+  } = useForm({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { name: '', email: '', password: '', role: 'student' }
+  });
 
+  const onLoginSubmit = async (data) => {
+    setApiError('');
     try {
-      await authService.login(formData.email, formData.password);
+      await authService.login(data.email, data.password);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al iniciar sesión');
-    } finally {
-      setLoading(false);
+      setApiError(err.response?.data?.message || 'Error al iniciar sesión');
     }
   };
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
+  const onRegisterSubmit = async (data) => {
+    setApiError('');
     try {
-      await authService.register(
-        registerData.name,
-        registerData.email,
-        registerData.password,
-        registerData.role
-      );
+      await authService.register(data.name, data.email, data.password, data.role);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al registrarse');
-    } finally {
-      setLoading(false);
+      setApiError(err.response?.data?.message || 'Error al registrarse');
     }
-  };
-
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  const handleRegisterChange = (e) => {
-    setRegisterData({
-      ...registerData,
-      [e.target.name]: e.target.value
-    });
   };
 
   const OAuthGithub = () => {
-    //--------------------------------------
     const githubAuthUrl = import.meta.env.VITE_GITHUB_AUTH_URL || 'http://localhost:5000/api/auth/github';
     
     return (
@@ -84,7 +71,7 @@ const Login = () => {
           <button
             type="button"
             onClick={() => window.location.href = githubAuthUrl}
-            disabled={loading}
+            disabled={isLoginSubmitting || isRegisterSubmitting}
             className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
@@ -119,61 +106,43 @@ const Login = () => {
           </h2>
 
           {/* Error Message */}
-          {error && (
+          {apiError && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
               <AlertCircle size={20} />
-              <span className="text-sm">{error}</span>
+              <span className="text-sm">{apiError}</span>
             </div>
           )}
 
           {/* Login Form */}
           {!isRegister ? (
             <>
-              <form onSubmit={handleLogin} className="space-y-5">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    E-mail
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 text-gray-400" size={20} />
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      className="input-field pl-10"
-                      placeholder="xxx@uce.edu.ec"
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
+              <form onSubmit={handleSubmitLogin(onLoginSubmit)} className="space-y-5">
+                <FormInput
+                  label="E-mail"
+                  type="email"
+                  icon={Mail}
+                  placeholder="xxx@uce.edu.ec"
+                  {...registerLogin('email')}
+                  error={loginErrors.email?.message}
+                  disabled={isLoginSubmitting}
+                />
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 text-gray-400" size={20} />
-                    <input
-                      type="password"
-                      name="password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      className="input-field pl-10"
-                      placeholder="••••••••"
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
+                <FormInput
+                  label="Password"
+                  type="password"
+                  icon={Lock}
+                  placeholder="••••••••"
+                  {...registerLogin('password')}
+                  error={loginErrors.password?.message}
+                  disabled={isLoginSubmitting}
+                />
 
                 <button
                   type="submit"
                   className="w-full btn-primary py-3 text-lg"
-                  disabled={loading}
+                  disabled={isLoginSubmitting}
                 >
-                  {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+                  {isLoginSubmitting ? 'Iniciando sesión...' : 'Iniciar Sesión'}
                 </button>
 
                 <div className="text-center">
@@ -181,9 +150,9 @@ const Login = () => {
                     type="button"
                     onClick={() => setIsRegister(true)}
                     className="text-primary-600 hover:text-primary-700 font-medium"
-                    disabled={loading}
+                    disabled={isLoginSubmitting}
                   >
-                    ¿Do not have an account? Sing up
+                    ¿Do not have an account? Sign up
                   </button>
                 </div>
               </form>
@@ -193,84 +162,53 @@ const Login = () => {
           ) : (
             <>
               {/* Register Form */}
-              <form onSubmit={handleRegister} className="space-y-5">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nanme
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={registerData.name}
-                    onChange={handleRegisterChange}
-                    className="input-field"
-                    placeholder="Name Lastname"
-                    required
-                    disabled={loading}
-                  />
-                </div>
+              <form onSubmit={handleSubmitRegister(onRegisterSubmit)} className="space-y-5">
+                <FormInput
+                  label="Name"
+                  type="text"
+                  placeholder="Name Lastname"
+                  {...registerForm('name')}
+                  error={registerErrors.name?.message}
+                  disabled={isRegisterSubmitting}
+                />
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    E-mail
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 text-gray-400" size={20} />
-                    <input
-                      type="email"
-                      name="email"
-                      value={registerData.email}
-                      onChange={handleRegisterChange}
-                      className="input-field pl-10"
-                      placeholder="xxx@uce.edu.ec"
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
+                <FormInput
+                  label="E-mail"
+                  type="email"
+                  icon={Mail}
+                  placeholder="xxx@uce.edu.ec"
+                  {...registerForm('email')}
+                  error={registerErrors.email?.message}
+                  disabled={isRegisterSubmitting}
+                />
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 text-gray-400" size={20} />
-                    <input
-                      type="password"
-                      name="password"
-                      value={registerData.password}
-                      onChange={handleRegisterChange}
-                      className="input-field pl-10"
-                      placeholder="Mínimo 6 caracteres"
-                      required
-                      minLength={6}
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
+                <FormInput
+                  label="Password"
+                  type="password"
+                  icon={Lock}
+                  placeholder="Mínimo 6 caracteres"
+                  {...registerForm('password')}
+                  error={registerErrors.password?.message}
+                  disabled={isRegisterSubmitting}
+                />
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Rol
-                  </label>
-                  <select
-                    name="role"
-                    value={registerData.role}
-                    onChange={handleRegisterChange}
-                    className="input-field"
-                    disabled={loading}
-                  >
-                    <option value="student">Student</option>
-                    <option value="faculty">Teacher</option>
-                  </select>
-                </div>
+                <FormSelect
+                  label="Rol"
+                  {...registerForm('role')}
+                  error={registerErrors.role?.message}
+                  options={[
+                    { value: 'student', label: 'Student' },
+                    { value: 'faculty', label: 'Teacher' }
+                  ]}
+                  disabled={isRegisterSubmitting}
+                />
 
                 <button
                   type="submit"
                   className="w-full btn-primary py-3 text-lg"
-                  disabled={loading}
+                  disabled={isRegisterSubmitting}
                 >
-                  {loading ? 'Registrando...' : 'Registrarse'}
+                  {isRegisterSubmitting ? 'Registrando...' : 'Registrarse'}
                 </button>
 
                 <div className="text-center">
@@ -278,9 +216,9 @@ const Login = () => {
                     type="button"
                     onClick={() => setIsRegister(false)}
                     className="text-primary-600 hover:text-primary-700 font-medium"
-                    disabled={loading}
+                    disabled={isRegisterSubmitting}
                   >
-                    ¿Already have an account?? Log in
+                    ¿Already have an account? Log in
                   </button>
                 </div>
               </form>

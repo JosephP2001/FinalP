@@ -12,15 +12,12 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Email is required'],
     unique: true,
     lowercase: true,
-    trim: true,
-    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
+    trim: true
   },
   password: {
     type: String,
-    required: function() {
-      return !this.authProvider || this.authProvider === 'local';
-    },
-    minlength: 6,
+    required: [true, 'Password is required'],
+    minlength: [6, 'Password must be at least 6 characters'],
     select: false
   },
   role: {
@@ -28,38 +25,43 @@ const userSchema = new mongoose.Schema({
     enum: ['student', 'faculty', 'admin'],
     default: 'student'
   },
-  authProvider: {
+  githubId: {
     type: String,
-    enum: ['local', 'github'],
-    default: 'local'
-  },
-  providerId: {
-    type: String,
+    unique: true,
     sparse: true
   },
-  avatar: String
-}, {
-  timestamps: true
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
 });
 
+// Hash password antes de guardar
 userSchema.pre('save', async function(next) {
-  if (!this.isModified('password') || this.authProvider !== 'local') {
+  if (!this.isModified('password')) {
     return next();
   }
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
+  
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
 
+// Método para comparar passwords
 userSchema.methods.comparePassword = async function(candidatePassword) {
-  if (this.authProvider !== 'local') return false;
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
+// Método toJSON para no exponer el password
 userSchema.methods.toJSON = function() {
-  const user = this.toObject();
-  delete user.password;
-  return user;
+  const userObject = this.toObject();
+  delete userObject.password;
+  delete userObject.__v;
+  return userObject;
 };
 
 export default mongoose.model('User', userSchema);
