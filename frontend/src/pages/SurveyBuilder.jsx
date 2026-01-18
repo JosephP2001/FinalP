@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -40,6 +40,22 @@ const SurveyBuilder = () => {
     name: 'questions'
   });
 
+  // ✅ DEBUGGING: Log validation errors
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      console.log('❌ Validation Errors:', errors);
+      console.log('❌ Errors stringified:', JSON.stringify(errors, null, 2));
+    }
+  }, [errors]);
+
+  // ✅ DEBUGGING: Watch form data changes
+  useEffect(() => {
+    const subscription = watch((value) => {
+      console.log('📝 Form data changed:', value);
+    });
+    return () => subscription.unsubscribe();
+  }, [watch]);
+
   const questionTypes = [
     { value: 'text', label: '📝 Texto Libre' },
     { value: 'multiple', label: '☑️ Opción Múltiple' },
@@ -58,25 +74,30 @@ const SurveyBuilder = () => {
 
   const onSubmit = async (data, publishNow = false) => {
     try {
+      console.log('🟢 [SUBMIT] Starting submission...');
+      console.log('📦 [SUBMIT] Form data:', JSON.stringify(data, null, 2));
+      
       setApiError('');
 
-      // Validar que haya al menos una pregunta
+      // Validate at least one question
       if (data.questions.length === 0) {
+        console.log('❌ [SUBMIT] No questions!');
         setApiError('Debes agregar al menos una pregunta');
         return;
       }
 
-      // Validar preguntas de opción múltiple
+      // Validate multiple choice questions
       const invalidMultiple = data.questions.filter(
         q => q.type === 'multiple' && (!q.options || q.options.length < 2)
       );
 
       if (invalidMultiple.length > 0) {
+        console.log('❌ [SUBMIT] Invalid multiple choice questions:', invalidMultiple);
         setApiError('Las preguntas de opción múltiple deben tener al menos 2 opciones');
         return;
       }
 
-      // Preparar datos
+      // Prepare data
       const surveyData = {
         ...data,
         status: publishNow ? 'active' : 'draft',
@@ -86,7 +107,11 @@ const SurveyBuilder = () => {
         }))
       };
 
+      console.log('🚀 [SUBMIT] Sending to API:', JSON.stringify(surveyData, null, 2));
+
       await surveyService.createSurvey(surveyData);
+
+      console.log('✅ [SUBMIT] Success!');
 
       alert(publishNow 
         ? '¡Encuesta publicada exitosamente!' 
@@ -95,6 +120,8 @@ const SurveyBuilder = () => {
 
       navigate('/surveys');
     } catch (err) {
+      console.error('❌ [SUBMIT] Error:', err);
+      console.error('❌ [SUBMIT] Error response:', err.response?.data);
       setApiError(err.response?.data?.message || 'Error al crear encuesta');
     }
   };
@@ -116,7 +143,7 @@ const SurveyBuilder = () => {
         )}
 
         <form>
-          {/* Información General */}
+          {/* General Information */}
           <div className="card p-6 mb-6">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Información General</h2>
 
@@ -176,7 +203,7 @@ const SurveyBuilder = () => {
             </div>
           </div>
 
-          {/* Preguntas */}
+          {/* Questions */}
           <div className="card p-6 mb-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-gray-800">
@@ -215,7 +242,7 @@ const SurveyBuilder = () => {
             )}
           </div>
 
-          {/* Botones de acción */}
+          {/* Action Buttons */}
           <div className="flex gap-4">
             <button
               type="button"
@@ -250,17 +277,10 @@ const SurveyBuilder = () => {
   );
 };
 
-// Componente para cada pregunta
+// Question Item Component
 const QuestionItem = ({ qIndex, control, register, remove, watch, errors, questionTypes }) => {
   const questionType = watch(`questions.${qIndex}.type`);
   const questionOptions = watch(`questions.${qIndex}.options`) || [];
-
-  const addOption = () => {
-    const currentOptions = questionOptions;
-    const newOptions = [...currentOptions, ''];
-    // Necesitamos usar setValue desde el form principal, pero para simplificar:
-    // Usamos Controller para las opciones
-  };
 
   return (
     <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -301,7 +321,7 @@ const QuestionItem = ({ qIndex, control, register, remove, watch, errors, questi
           </label>
         </div>
 
-        {/* Opciones para preguntas múltiples */}
+        {/* Options for multiple choice questions */}
         {questionType === 'multiple' && (
           <Controller
             name={`questions.${qIndex}.options`}
@@ -321,7 +341,7 @@ const QuestionItem = ({ qIndex, control, register, remove, watch, errors, questi
   );
 };
 
-// Gestor de opciones
+// Options Manager Component
 const OptionsManager = ({ value = [], onChange, error }) => {
   const addOption = () => {
     onChange([...value, '']);

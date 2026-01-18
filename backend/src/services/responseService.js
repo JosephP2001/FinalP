@@ -6,7 +6,7 @@ export const responseService = {
     const response = await api.post('/responses', {
       surveyId,
       answers: data.answers,
-      respondentEmail: data.respondentEmail // ✅ NUEVO
+      respondentEmail: data.respondentEmail 
     });
     return response.data;
   },

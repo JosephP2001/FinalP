@@ -16,7 +16,10 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: [true, 'Password is required'],
+    required: function() {
+      // ✅ Solo requerido si NO usa GitHub OAuth
+      return !this.githubId;
+    },
     minlength: [6, 'Password must be at least 6 characters'],
     select: false
   },
@@ -30,6 +33,14 @@ const userSchema = new mongoose.Schema({
     unique: true,
     sparse: true
   },
+  // AGREGAR estos campos para GitHub OAuth
+  authProvider: {
+    type: String,
+    enum: ['local', 'github'],
+    default: 'local'
+  },
+  providerId: String,
+  avatar: String,
   createdAt: {
     type: Date,
     default: Date.now
@@ -38,7 +49,8 @@ const userSchema = new mongoose.Schema({
 
 // Hash password antes de guardar
 userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) {
+  // Solo hashear si hay password Y fue modificado
+  if (!this.isModified('password') || !this.password) {
     return next();
   }
   
@@ -51,12 +63,14 @@ userSchema.pre('save', async function(next) {
   }
 });
 
-// Método para comparar passwords
+// Method --> Password comparison
 userSchema.methods.comparePassword = async function(candidatePassword) {
+  // Is the password? (GitHub user), -> false
+  if (!this.password) return false;
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Método toJSON para no exponer el password
+// Method: DO NOT EXPOSE PASSWORD 
 userSchema.methods.toJSON = function() {
   const userObject = this.toObject();
   delete userObject.password;
