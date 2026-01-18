@@ -1,5 +1,3 @@
-# Abre el .gitignore en la raíz y asegúrate de que tiene:
-
 # Environment variables - CRÍTICO
 .env
 .env.*
