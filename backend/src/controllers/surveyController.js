@@ -229,3 +229,27 @@ export const getAIAnalysis = async (req, res) => {
     });
   }
 };
+
+//----ADMIN----ADMIN----ADMIN----ADMIN----ADMIN----ADMIN----ADMIN----ADMIN----
+// @desc    Get ALL surveys (admin only)
+// @route   GET /api/surveys/admin/all-surveys
+// @access  Private (Admin)
+export const getAllSurveysAdmin = async (req, res) => {
+  try {
+    const surveys = await Survey.find()
+      .populate('creator', 'name email role')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: surveys.length,
+      data: surveys
+    });
+  } catch (error) {
+    console.error('Get all surveys admin error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};

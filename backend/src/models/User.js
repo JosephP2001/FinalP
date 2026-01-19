@@ -17,39 +17,35 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: function() {
-      // ✅ Solo requerido si NO usa GitHub OAuth
-      return !this.githubId;
+      return !this.githubId; // Not required for GitHub OAuth users
     },
     minlength: [6, 'Password must be at least 6 characters'],
     select: false
   },
   role: {
     type: String,
-    enum: ['student', 'faculty', 'admin'],
-    default: 'student'
+    enum: ['user', 'admin'], //  Only 2 roles: user (default) and admin
+    default: 'user'
   },
+  // GitHub OAuth fields
   githubId: {
     type: String,
     unique: true,
     sparse: true
   },
-  // AGREGAR estos campos para GitHub OAuth
   authProvider: {
     type: String,
     enum: ['local', 'github'],
     default: 'local'
   },
   providerId: String,
-  avatar: String,
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
+  avatar: String
+}, {
+  timestamps: true
 });
 
-// Hash password antes de guardar
+// Hash password before saving
 userSchema.pre('save', async function(next) {
-  // Solo hashear si hay password Y fue modificado
   if (!this.isModified('password') || !this.password) {
     return next();
   }
@@ -63,14 +59,13 @@ userSchema.pre('save', async function(next) {
   }
 });
 
-// Method --> Password comparison
+// Method to compare passwords
 userSchema.methods.comparePassword = async function(candidatePassword) {
-  // Is the password? (GitHub user), -> false
   if (!this.password) return false;
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Method: DO NOT EXPOSE PASSWORD 
+// Method to hide sensitive data in JSON responses
 userSchema.methods.toJSON = function() {
   const userObject = this.toObject();
   delete userObject.password;

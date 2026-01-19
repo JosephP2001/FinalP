@@ -3,9 +3,10 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
+import AdminDashboard from './pages/AdminDashboard'; // ← NEW
 import SurveyList from './pages/SurveyList';
 import SurveyBuilder from './pages/SurveyBuilder';
-import SurveyEdit from './pages/SurveyEdit'; // ← NEW
+import SurveyEdit from './pages/SurveyEdit';
 import SurveyRespond from './pages/SurveyRespond';
 import SurveyResults from './pages/SurveyResults';
 
@@ -20,13 +21,17 @@ function App() {
         <Route path="/dashboard" element={
           <ProtectedRoute><Dashboard /></ProtectedRoute>
         } />
+        {/*ADMIN dashboard */}
+        <Route path="/admin" element={
+          <ProtectedRoute><AdminDashboard /></ProtectedRoute>
+        } />
         <Route path="/surveys" element={
           <ProtectedRoute><SurveyList /></ProtectedRoute>
         } />
         <Route path="/surveys/create" element={
           <ProtectedRoute><SurveyBuilder /></ProtectedRoute>
         } />
-        {/*  Edit ROUTE */}
+        {/* "EDIT" route*/}
         <Route path="/surveys/:id/edit" element={
           <ProtectedRoute><SurveyEdit /></ProtectedRoute>
         } />

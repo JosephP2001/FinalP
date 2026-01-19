@@ -1,7 +1,3 @@
-/*
-*Added:I analysis route (DONE)
-*/
-
 import express from 'express';
 import {
   getSurveys,
@@ -10,24 +6,29 @@ import {
   updateSurvey,
   deleteSurvey,
   getMySurveys,
-  getAIAnalysis
+  getAIAnalysis,
+  getAllSurveysAdmin
 } from '../controllers/surveyController.js';
 import { protect } from '../middlewares/auth.js';
+import { isAdmin, isOwnerOrAdmin } from '../middlewares/authorize.js'; // ✅ NEW
 import { cacheMiddleware } from '../middlewares/cache.js';
 
 const router = express.Router();
 
-// Public routes (with caché)
+// Public routes (with cache)
 router.get('/', cacheMiddleware(300), getSurveys);
 router.get('/:id', cacheMiddleware(600), getSurvey);
 
-// Protected routes
+// Protected routes - All authenticated users
 router.get('/my/surveys', protect, getMySurveys);
-router.post('/', protect, createSurvey);
-router.put('/:id', protect, updateSurvey);
-router.delete('/:id', protect, deleteSurvey);
+router.post('/', protect, createSurvey); // Anyone can create
 
-// AI analysis route
-router.get('/:id/ai-analysis', protect, getAIAnalysis);
+// Protected routes - Owner or Admin only
+router.put('/:id', protect, isOwnerOrAdmin, updateSurvey);
+router.delete('/:id', protect, isOwnerOrAdmin, deleteSurvey);
+router.get('/:id/ai-analysis', protect, isOwnerOrAdmin, getAIAnalysis);
+
+// Admin-only routes
+router.get('/admin/all-surveys', protect, isAdmin, getAllSurveysAdmin);
 
 export default router;
