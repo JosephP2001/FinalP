@@ -1,12 +1,21 @@
 import api from './api';
 
 export const responseService = {
-  // Submit response -> survey
-  async submitResponse(surveyId, answers) {
-    const response = await api.post('/responses', {
-      surveyId,
-      answers
-    });
+  // Submit response to survey (WITH EMAIL)
+  async submitResponse(surveyId, data) {
+    console.log('📤 [SERVICE] Submitting response');
+    console.log('📤 [SERVICE] surveyId:', surveyId);
+    console.log('📤 [SERVICE] data:', data);
+    
+    const payload = {
+      surveyId,  
+      answers: data.answers,
+      respondentEmail: data.respondentEmail
+    };
+    
+    console.log('📤 [SERVICE] Final payload:', JSON.stringify(payload, null, 2));
+    
+    const response = await api.post('/responses', payload);
     return response.data;
   },
 

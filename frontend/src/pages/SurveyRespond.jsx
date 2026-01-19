@@ -64,28 +64,50 @@ const SurveyRespond = () => {
 
   const onSubmit = async (data) => {
     try {
+      console.log('🟢 [RESPONSE] Starting submission...');
+      console.log('📦 [RESPONSE] Raw form data:', data);
+      
       setError('');
 
-      // Validar respuestas obligatorias
+      // Validate email is present
+      if (!data.respondentEmail || data.respondentEmail.trim() === '') {
+        console.log('❌ [RESPONSE] Email is missing!');
+        setError('El email es obligatorio');
+        return;
+      }
+
+      // Validate required questions
       const requiredQuestions = survey.questions.filter(q => q.required);
       const missingAnswers = requiredQuestions.filter(q => !data.answers[q._id] || data.answers[q._id] === '');
 
       if (missingAnswers.length > 0) {
+        console.log('❌ [RESPONSE] Missing answers:', missingAnswers);
         setError(`Por favor responde todas las preguntas obligatorias (${missingAnswers.length} faltantes)`);
         return;
       }
 
-      // Formatear respuestas
-      const formattedAnswers = Object.entries(data.answers).map(([questionId, value]) => ({
-        questionId,
-        value
-      }));
+      // Format answers - Convert object to array
+      const formattedAnswers = Object.entries(data.answers)
+        .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
+        .map(([questionId, value]) => ({
+          questionId,
+          value
+        }));
 
-      // Enviar con email
-      await responseService.submitResponse(id, {
+      console.log('📝 [RESPONSE] Formatted answers:', formattedAnswers);
+
+      // Prepare payload
+      const payload = {
         answers: formattedAnswers,
-        respondentEmail: data.respondentEmail
-      });
+        respondentEmail: data.respondentEmail.trim()
+      };
+
+      console.log('🚀 [RESPONSE] Sending to API:', JSON.stringify(payload, null, 2));
+
+      // Send response
+      await responseService.submitResponse(id, payload);
+
+      console.log('✅ [RESPONSE] Success!');
 
       setSuccess(true);
 
@@ -93,6 +115,8 @@ const SurveyRespond = () => {
         navigate('/');
       }, 3000);
     } catch (err) {
+      console.error('❌ [RESPONSE] Error:', err);
+      console.error('❌ [RESPONSE] Error response:', err.response?.data);
       setError(err.response?.data?.message || 'Error al enviar respuesta');
     }
   };
@@ -274,7 +298,7 @@ const SurveyRespond = () => {
             </div>
           )}
 
-          {/* EMAIL REQUERIDO */}
+          {/* REQUIRED EMAIL */}
           <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
             <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
               <Mail size={20} className="text-blue-600" />
