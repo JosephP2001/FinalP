@@ -84,6 +84,12 @@ export const createSurvey = async (req, res) => {
     };
 
     const survey = await Survey.create(surveyData);
+    
+    console.log('✅ Survey created:', {
+      id: survey._id,
+      title: survey.title,
+      maxResponses: survey.settings?.maxResponses
+    });
 
     res.status(201).json({
       success: true,
@@ -91,6 +97,7 @@ export const createSurvey = async (req, res) => {
       data: survey
     });
   } catch (error) {
+    console.error('Create survey error:', error);
     res.status(500).json({
       success: false,
       message: error.message
@@ -207,7 +214,7 @@ export const getAIAnalysis = async (req, res) => {
       });
     }
 
-    // IA analisys generator
+    // Generate AI analysis
     const analysis = await getGroqAnalysis(survey, responses);
 
     res.status(200).json({

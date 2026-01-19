@@ -10,7 +10,7 @@ export const submitResponse = async (req, res) => {
   try {
     const { surveyId, answers, respondentEmail } = req.body;
 
-    // Validar email
+    // Validate email
     if (!respondentEmail) {
       return res.status(400).json({
         success: false,
@@ -18,7 +18,7 @@ export const submitResponse = async (req, res) => {
       });
     }
 
-    // Validar formato email
+    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(respondentEmail)) {
       return res.status(400).json({
@@ -27,7 +27,7 @@ export const submitResponse = async (req, res) => {
       });
     }
 
-    // Buscar encuesta
+    // Find survey
     const survey = await Survey.findById(surveyId);
 
     if (!survey) {
@@ -37,7 +37,7 @@ export const submitResponse = async (req, res) => {
       });
     }
 
-    // Verificar estado
+    // Check status
     if (survey.status !== 'active') {
       return res.status(400).json({
         success: false,
@@ -45,7 +45,7 @@ export const submitResponse = async (req, res) => {
       });
     }
 
-    // Verificar fechas
+    // Check dates
     const now = new Date();
     if (survey.settings?.startDate && new Date(survey.settings.startDate) > now) {
       return res.status(400).json({
@@ -60,7 +60,7 @@ export const submitResponse = async (req, res) => {
       });
     }
 
-    // Verificar límite de respuestas
+    // FIXED: Check response limit BEFORE creating response
     if (survey.settings?.maxResponses && survey.responseCount >= survey.settings.maxResponses) {
       return res.status(400).json({
         success: false,
@@ -68,11 +68,10 @@ export const submitResponse = async (req, res) => {
       });
     }
 
-    // ✅ VERIFICAR SI EL EMAIL YA RESPONDIÓ
+    // Check if email already responded
     const hasResponded = await Response.hasResponded(surveyId, respondentEmail);
     
     if (hasResponded) {
-      // Enviar email de notificación
       await sendAlreadyResponded(respondentEmail, survey.title);
       
       return res.status(400).json({
@@ -81,7 +80,7 @@ export const submitResponse = async (req, res) => {
       });
     }
 
-    // Crear respuesta
+    // Create response
     const response = new Response({
       surveyId,
       respondentEmail: respondentEmail.toLowerCase(),
@@ -92,11 +91,13 @@ export const submitResponse = async (req, res) => {
 
     await response.save();
 
-    // Incrementar contador
-    survey.responseCount += 1;
+    // FIX: Increment counter and save
+    survey.responseCount = (survey.responseCount || 0) + 1;
     await survey.save();
 
-    // ✅ VERIFICAR SI DEBE CERRARSE AUTOMÁTICAMENTE
+    console.log(`Response saved. New count: ${survey.responseCount}/${survey.settings?.maxResponses || '∞'}`);
+
+    // Check if should auto-close
     await closeSurveyIfNeeded(survey);
 
     res.status(201).json({
@@ -108,7 +109,7 @@ export const submitResponse = async (req, res) => {
       }
     });
   } catch (error) {
-    // Error de duplicado (por si falla la validación previa)
+    // Duplicate error
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
@@ -140,7 +141,7 @@ export const getSurveyResponses = async (req, res) => {
       });
     }
 
-    // Verificar ownership
+    // Verify ownership
     if (survey.creator.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -181,7 +182,7 @@ export const getSurveyStats = async (req, res) => {
       });
     }
 
-    // Verificar ownership
+    // Verify ownership
     if (survey.creator.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -191,7 +192,7 @@ export const getSurveyStats = async (req, res) => {
 
     const responses = await Response.find({ surveyId });
 
-    // Calcular estadísticas por pregunta
+    // Calculate statistics per question
     const questionStats = {};
 
     responses.forEach(response => {
@@ -210,13 +211,25 @@ export const getSurveyStats = async (req, res) => {
       });
     });
 
+    // FIX: Calculate response rate
+    let responseRate = 0;
+    if (survey.settings?.maxResponses && survey.settings.maxResponses > 0) {
+      responseRate = (responses.length / survey.settings.maxResponses) * 100;
+    }
+
+    // FIX: Get last response date properly sorted
+    const lastResponse = responses.length > 0 
+      ? responses.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))[0].submittedAt
+      : null;
+
     res.json({
       success: true,
       data: {
         totalResponses: responses.length,
-        uniqueRespondents: responses.length, // Ahora es único por email
+        uniqueRespondents: responses.length,
         questionStats,
-        lastResponse: responses.length > 0 ? responses[responses.length - 1].submittedAt : null
+        responseRate, // Added
+        latestResponse: lastResponse // Fixed
       }
     });
   } catch (error) {
