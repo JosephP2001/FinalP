@@ -12,6 +12,7 @@ import { startAutoClosureJob } from './services/surveyClosureService.js';
 import authRoutes from './routes/authRoutes.js';
 import surveyRoutes from './routes/surveyRoutes.js';
 import responseRoutes from './routes/responseRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 dotenv.config();
 
@@ -28,19 +29,19 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
-// Session middleware (requerido para Passport)
+// Session middleware (required for Passport)
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    maxAge: 24 * 60 * 60 * 1000, // 24 horas
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production'
   }
 }));
 
-// Inicializar Passport
+// Initialize Passport
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -48,6 +49,7 @@ app.use(passport.session());
 app.use('/api/auth', authRoutes);
 app.use('/api/surveys', surveyRoutes);
 app.use('/api/responses', responseRoutes);
+app.use('/api/admin', adminRoutes); // Admin routes
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -78,21 +80,21 @@ app.use((err, req, res, next) => {
 // Start server
 const startServer = async () => {
   try {
-    // Conectar a MongoDB
+    // Connect to MongoDB
     await connectDB();
     
-    // Conectar a Redis
+    // Connect to Redis
     await connectRedis();
 
-    // Iniciar cron job de cierre automático
+    // Start auto-closure cron job
     startAutoClosureJob();
 
     app.listen(PORT, () => {
-      console.log(` Server running on port ${PORT}`);
-      console.log(` Auto-closure cron job active`);
+      console.log(`✅ Server running on port ${PORT}`);
+      console.log(`⏰ Auto-closure cron job active`);
     });
   } catch (error) {
-    console.error(' Server startup error:', error);
+    console.error('❌ Server startup error:', error);
     process.exit(1);
   }
 };

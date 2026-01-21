@@ -1,12 +1,12 @@
 import { Link } from 'react-router-dom';
-import { Home, FileText, LogOut, User } from 'lucide-react';
+import { Home, FileText, LogOut, User, Shield, Users } from 'lucide-react';
 import { authService } from '../../services/authService';
 
 const Navbar = () => {
   const user = authService.getCurrentUser();
 
   const handleLogout = () => {
-    if (confirm('¿Estás seguro de cerrar sesión?')) {
+    if (confirm('Are you sure you want to log out?')) {
       authService.logout();
     }
   };
@@ -39,13 +39,43 @@ const Navbar = () => {
               <FileText size={20} />
               <span>My Surveys</span>
             </Link>
+
+            {/* Admin Links - Only visible to admins */}
+            {user?.role === 'admin' && (
+              <>
+                <div className="h-6 w-px bg-gray-300"></div>
+                <Link 
+                  to="/admin" 
+                  className="flex items-center space-x-2 text-purple-600 hover:text-purple-700 transition-colors font-medium"
+                >
+                  <Shield size={20} />
+                  <span>All Surveys</span>
+                </Link>
+                <Link 
+                  to="/admin/users" 
+                  className="flex items-center space-x-2 text-purple-600 hover:text-purple-700 transition-colors font-medium"
+                >
+                  <Users size={20} />
+                  <span>Manage Users</span>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* User Menu */}
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2 text-gray-700">
-              <User size={20} />
-              <span className="hidden md:inline">{user?.name || 'Usuario'}</span>
+              <div className="flex items-center gap-2">
+                <User size={20} />
+                <div className="hidden md:block">
+                  <span className="font-medium">{user?.name || 'User'}</span>
+                  {user?.role === 'admin' && (
+                    <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
+                      Admin
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
             <button
               onClick={handleLogout}

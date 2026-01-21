@@ -6,7 +6,6 @@ import { Mail, Lock, AlertCircle } from 'lucide-react';
 import { authService } from '../services/authService';
 import { loginSchema, registerSchema } from '../schemas/authSchemas';
 import FormInput from '../components/common/FormInput';
-import FormSelect from '../components/common/FormSelect';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -30,7 +29,7 @@ const Login = () => {
     formState: { errors: registerErrors, isSubmitting: isRegisterSubmitting }
   } = useForm({
     resolver: zodResolver(registerSchema),
-    defaultValues: { name: '', email: '', password: '', role: 'student' }
+    defaultValues: { name: '', email: '', password: '', role: 'user' } // ✅ Changed default
   });
 
   const onLoginSubmit = async (data) => {
@@ -46,7 +45,8 @@ const Login = () => {
   const onRegisterSubmit = async (data) => {
     setApiError('');
     try {
-      await authService.register(data.name, data.email, data.password, data.role);
+      // Always register as 'user' - admin is assigned manually in DB
+      await authService.register(data.name, data.email, data.password, 'user');
       navigate('/dashboard');
     } catch (err) {
       setApiError(err.response?.data?.message || 'Error al registrarse');
@@ -91,7 +91,7 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-500 via-purple-500 to-secondary-500 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
-        {/* Logo & Título */}
+        {/* Logo & Title */}
         <div className="text-center mb-8">
           <div className="text-6xl mb-4">📊</div>
           <h1 className="text-4xl font-bold text-white mb-2">
@@ -192,16 +192,8 @@ const Login = () => {
                   disabled={isRegisterSubmitting}
                 />
 
-                <FormSelect
-                  label="Rol"
-                  {...registerForm('role')}
-                  error={registerErrors.role?.message}
-                  options={[
-                    { value: 'student', label: 'Student' },
-                    { value: 'faculty', label: 'Teacher' }
-                  ]}
-                  disabled={isRegisterSubmitting}
-                />
+                {/* Removed role selector - all new users are 'user' by default */}
+                {/* Admin role is assigned manually in database */}
 
                 <button
                   type="submit"

@@ -2,7 +2,7 @@ import passport from 'passport';
 import { Strategy as GitHubStrategy } from 'passport-github2';
 import User from '../models/User.js';
 
-// Serialización de usuario para sesiones
+// Serialize user for sessions
 passport.serializeUser((user, done) => {
   done(null, user._id);
 });
@@ -16,7 +16,7 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
-// Estrategia de GitHub OAuth
+// GitHub OAuth Strategy
 passport.use(
   new GitHubStrategy(
     {
@@ -27,36 +27,42 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        // Buscar usuario existente por GitHub ID
+        // Find existing user by GitHub ID
         let user = await User.findOne({ githubId: profile.id });
 
         if (user) {
-          // Usuario encontrado, devolver
+          // User found, return
           return done(null, user);
         }
 
-        // Obtener email del perfil
+        // Get email from profile
         const email = profile.emails && profile.emails[0] 
           ? profile.emails[0].value 
           : `${profile.username}@github.user`;
 
-        // Verificar si existe un usuario con ese email
+        // Check if user exists with that email
         user = await User.findOne({ email });
 
         if (user) {
-          // Usuario existe con ese email, vincular GitHub
+          // User exists with that email, link GitHub account
           user.githubId = profile.id;
+          user.authProvider = 'github';
+          user.providerId = profile.id;
+          user.avatar = profile.photos && profile.photos[0] ? profile.photos[0].value : null;
           await user.save();
           return done(null, user);
         }
 
-        // Crear nuevo usuario
+        // Create new user
         user = await User.create({
           name: profile.displayName || profile.username,
           email: email,
           githubId: profile.id,
-          password: Math.random().toString(36).slice(-8), // Password aleatorio
-          role: 'student'
+          password: Math.random().toString(36).slice(-8), // Random password
+          role: 'user', //  Changed from 'student' to 'user'
+          authProvider: 'github',
+          providerId: profile.id,
+          avatar: profile.photos && profile.photos[0] ? profile.photos[0].value : null
         });
 
         done(null, user);

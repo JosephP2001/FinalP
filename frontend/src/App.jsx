@@ -3,7 +3,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
-import AdminDashboard from './pages/AdminDashboard'; // ← NEW
+import AdminDashboard from './pages/AdminDashboard';
+import AdminUsers from './pages/AdminUsers'; // ← NEW: User management page
 import SurveyList from './pages/SurveyList';
 import SurveyBuilder from './pages/SurveyBuilder';
 import SurveyEdit from './pages/SurveyEdit';
@@ -21,17 +22,21 @@ function App() {
         <Route path="/dashboard" element={
           <ProtectedRoute><Dashboard /></ProtectedRoute>
         } />
-        {/*ADMIN dashboard */}
+        
+        {/* ADMIN routes */}
         <Route path="/admin" element={
           <ProtectedRoute><AdminDashboard /></ProtectedRoute>
         } />
+        <Route path="/admin/users" element={
+          <ProtectedRoute><AdminUsers /></ProtectedRoute>
+        } />
+        
         <Route path="/surveys" element={
           <ProtectedRoute><SurveyList /></ProtectedRoute>
         } />
         <Route path="/surveys/create" element={
           <ProtectedRoute><SurveyBuilder /></ProtectedRoute>
         } />
-        {/* "EDIT" route*/}
         <Route path="/surveys/:id/edit" element={
           <ProtectedRoute><SurveyEdit /></ProtectedRoute>
         } />

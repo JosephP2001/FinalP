@@ -24,8 +24,11 @@ export const registerSchema = z.object({
     .string()
     .min(1, 'La contraseña es obligatoria')
     .min(6, 'La contraseña debe tener al menos 6 caracteres'),
+  //  Role is optional now - defaults to 'user' in backend
   role: z
-    .enum(['student', 'faculty'], {
+    .enum(['user', 'admin'], {
       errorMap: () => ({ message: 'Rol inválido' })
     })
+    .default('user')
+    .optional()
 });
