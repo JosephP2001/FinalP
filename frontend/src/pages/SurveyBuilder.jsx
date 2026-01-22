@@ -28,6 +28,8 @@ const SurveyBuilder = () => {
       settings: {
         startDate: '',
         endDate: '',
+        startTime: '00:00',
+        endTime: '23:59',
         access: 'public',
         maxResponses: ''
       },
@@ -40,27 +42,27 @@ const SurveyBuilder = () => {
     name: 'questions'
   });
 
-  // ✅ DEBUGGING: Log validation errors
+  // Debugging: Log validation errors
   useEffect(() => {
     if (Object.keys(errors).length > 0) {
-      console.log('❌ Validation Errors:', errors);
-      console.log('❌ Errors stringified:', JSON.stringify(errors, null, 2));
+      console.log(' Validation Errors:', errors);
+      console.log(' Errors stringified:', JSON.stringify(errors, null, 2));
     }
   }, [errors]);
 
-  // ✅ DEBUGGING: Watch form data changes
+  // Debugging: Watch form data changes
   useEffect(() => {
     const subscription = watch((value) => {
-      console.log('📝 Form data changed:', value);
+      console.log('Form data changed:', value);
     });
     return () => subscription.unsubscribe();
   }, [watch]);
 
   const questionTypes = [
-    { value: 'text', label: '📝 Texto Libre' },
-    { value: 'multiple', label: '☑️ Opción Múltiple' },
-    { value: 'scale', label: '📊 Escala (1-10)' },
-    { value: 'date', label: '📅 Fecha' }
+    { value: 'text', label: '📝 Free Text' },
+    { value: 'multiple', label: '☑️ Multiple Choice' },
+    { value: 'scale', label: '📊 Scale (1-10)' },
+    { value: 'date', label: '📅 Date' }
   ];
 
   const addQuestion = () => {
@@ -72,17 +74,40 @@ const SurveyBuilder = () => {
     });
   };
 
+  /**
+   * Combine date and time into a proper ISO string
+   * @param {string} date - Date in format YYYY-MM-DD
+   * @param {string} time - Time in format HH:MM
+   * @returns {string} ISO date string
+   */
+  const combineDateAndTime = (date, time) => {
+    if (!date) return null;
+    
+    // If no time provided, use default
+    const timeValue = time || '00:00';
+    
+    // Create date string in local timezone
+    const dateTimeString = `${date}T${timeValue}:00`;
+    
+    // Parse as local time and convert to ISO
+    const dateObj = new Date(dateTimeString);
+    
+    console.log(`Combining: ${date} ${timeValue} -> ${dateObj.toISOString()}`);
+    
+    return dateObj.toISOString();
+  };
+
   const onSubmit = async (data, publishNow = false) => {
     try {
-      console.log('🟢 [SUBMIT] Starting submission...');
-      console.log('📦 [SUBMIT] Form data:', JSON.stringify(data, null, 2));
+      console.log(' [SUBMIT] Starting submission...');
+      console.log(' [SUBMIT] Form data:', JSON.stringify(data, null, 2));
       
       setApiError('');
 
       // Validate at least one question
       if (data.questions.length === 0) {
-        console.log('❌ [SUBMIT] No questions!');
-        setApiError('Debes agregar al menos una pregunta');
+        console.log('[SUBMIT] No questions!');
+        setApiError('You must add at least one question');
         return;
       }
 
@@ -93,36 +118,44 @@ const SurveyBuilder = () => {
 
       if (invalidMultiple.length > 0) {
         console.log('❌ [SUBMIT] Invalid multiple choice questions:', invalidMultiple);
-        setApiError('Las preguntas de opción múltiple deben tener al menos 2 opciones');
+        setApiError('Multiple choice questions must have at least 2 options');
         return;
       }
 
-      // Prepare data
+      // Prepare data with combined date/time
       const surveyData = {
-        ...data,
+        title: data.title,
+        description: data.description,
         status: publishNow ? 'active' : 'draft',
+        settings: {
+          access: data.settings.access,
+          maxResponses: data.settings.maxResponses ? parseInt(data.settings.maxResponses) : undefined,
+          // Combine date and time properly
+          startDate: combineDateAndTime(data.settings.startDate, data.settings.startTime),
+          endDate: combineDateAndTime(data.settings.endDate, data.settings.endTime)
+        },
         questions: data.questions.map((q, idx) => ({
           ...q,
           order: idx
         }))
       };
 
-      console.log('🚀 [SUBMIT] Sending to API:', JSON.stringify(surveyData, null, 2));
+      console.log('[SUBMIT] Sending to API:', JSON.stringify(surveyData, null, 2));
 
       await surveyService.createSurvey(surveyData);
 
-      console.log('✅ [SUBMIT] Success!');
+      console.log('[SUBMIT] Success!');
 
       alert(publishNow 
-        ? '¡Encuesta publicada exitosamente!' 
-        : '¡Encuesta guardada como borrador!'
+        ? 'Survey published successfully!' 
+        : 'Survey saved as draft!'
       );
 
       navigate('/surveys');
     } catch (err) {
       console.error('❌ [SUBMIT] Error:', err);
       console.error('❌ [SUBMIT] Error response:', err.response?.data);
-      setApiError(err.response?.data?.message || 'Error al crear encuesta');
+      setApiError(err.response?.data?.message || 'Error creating survey');
     }
   };
 
@@ -132,8 +165,8 @@ const SurveyBuilder = () => {
 
       <div className="container mx-auto px-6 py-8 max-w-4xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Crear Nueva Encuesta</h1>
-          <p className="text-gray-600">Diseña tu encuesta paso a paso</p>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Create New Survey</h1>
+          <p className="text-gray-600">Design your survey step by step</p>
         </div>
 
         {apiError && (
@@ -145,57 +178,83 @@ const SurveyBuilder = () => {
         <form>
           {/* General Information */}
           <div className="card p-6 mb-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Información General</h2>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">General Information</h2>
 
             <div className="space-y-4">
               <FormInput
-                label="Título de la Encuesta *"
-                placeholder="Ej: Evaluación del Servicio de Biblioteca"
+                label="Survey Title *"
+                placeholder="E.g.: Library Service Evaluation"
                 {...register('title')}
                 error={errors.title?.message}
               />
 
               <FormTextarea
-                label="Descripción"
+                label="Description"
                 rows={3}
-                placeholder="Describe el propósito de esta encuesta..."
+                placeholder="Describe the purpose of this survey..."
                 {...register('description')}
                 error={errors.description?.message}
               />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormInput
-                  label="Fecha de Inicio"
-                  type="date"
-                  {...register('settings.startDate')}
-                  error={errors.settings?.startDate?.message}
-                />
+              {/* Start Date and Time */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Start Date & Time (Ecuador Time - UTC-5)
+                </label>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormInput
+                    label="Date"
+                    type="date"
+                    {...register('settings.startDate')}
+                    error={errors.settings?.startDate?.message}
+                  />
+                  <FormInput
+                    label="Time"
+                    type="time"
+                    {...register('settings.startTime')}
+                    error={errors.settings?.startTime?.message}
+                  />
+                </div>
+              </div>
 
-                <FormInput
-                  label="Fecha de Fin"
-                  type="date"
-                  {...register('settings.endDate')}
-                  error={errors.settings?.endDate?.message}
-                />
+              {/* End Date and Time */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  End Date & Time (Ecuador Time - UTC-5)
+                </label>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormInput
+                    label="Date"
+                    type="date"
+                    {...register('settings.endDate')}
+                    error={errors.settings?.endDate?.message}
+                  />
+                  <FormInput
+                    label="Time"
+                    type="time"
+                    {...register('settings.endTime')}
+                    error={errors.settings?.endTime?.message}
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormSelect
-                  label="Acceso"
+                  label="Access"
                   {...register('settings.access')}
                   options={[
-                    { value: 'public', label: 'Público' },
-                    { value: 'private', label: 'Privado' },
-                    { value: 'token', label: 'Con Token' }
+                    { value: 'public', label: 'Public' },
+                    { value: 'private', label: 'Private' },
+                    { value: 'token', label: 'Token Required' }
                   ]}
                   error={errors.settings?.access?.message}
                 />
 
                 <FormInput
-                  label="Máximo de Respuestas"
+                  label="Maximum Responses"
                   type="number"
                   min="1"
-                  placeholder="Ilimitado"
+                  placeholder="Unlimited"
                   {...register('settings.maxResponses')}
                   error={errors.settings?.maxResponses?.message}
                 />
@@ -207,7 +266,7 @@ const SurveyBuilder = () => {
           <div className="card p-6 mb-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-gray-800">
-                Preguntas ({fields.length})
+                Questions ({fields.length})
               </h2>
               <button
                 type="button"
@@ -215,14 +274,14 @@ const SurveyBuilder = () => {
                 className="btn-primary flex items-center space-x-2"
               >
                 <Plus size={18} />
-                <span>Agregar Pregunta</span>
+                <span>Add Question</span>
               </button>
             </div>
 
             {fields.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <div className="text-6xl mb-4">❓</div>
-                <p>No hay preguntas aún. Haz clic en "Agregar Pregunta" para comenzar.</p>
+                <p>No questions yet. Click "Add Question" to start.</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -250,7 +309,7 @@ const SurveyBuilder = () => {
               className="btn-secondary flex-1"
               disabled={isSubmitting}
             >
-              Cancelar
+              Cancel
             </button>
             <button
               type="button"
@@ -259,7 +318,7 @@ const SurveyBuilder = () => {
               disabled={isSubmitting}
             >
               <Save size={18} className="inline mr-2" />
-              {isSubmitting ? 'Guardando...' : 'Guardar Borrador'}
+              {isSubmitting ? 'Saving...' : 'Save Draft'}
             </button>
             <button
               type="button"
@@ -268,7 +327,7 @@ const SurveyBuilder = () => {
               disabled={isSubmitting}
             >
               <Eye size={18} className="inline mr-2" />
-              {isSubmitting ? 'Publicando...' : 'Publicar Encuesta'}
+              {isSubmitting ? 'Publishing...' : 'Publish Survey'}
             </button>
           </div>
         </form>
@@ -280,13 +339,12 @@ const SurveyBuilder = () => {
 // Question Item Component
 const QuestionItem = ({ qIndex, control, register, remove, watch, errors, questionTypes }) => {
   const questionType = watch(`questions.${qIndex}.type`);
-  const questionOptions = watch(`questions.${qIndex}.options`) || [];
 
   return (
     <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
       <div className="flex justify-between items-start mb-3">
         <span className="text-sm font-semibold text-gray-600">
-          Pregunta {qIndex + 1}
+          Question {qIndex + 1}
         </span>
         <button
           type="button"
@@ -299,7 +357,7 @@ const QuestionItem = ({ qIndex, control, register, remove, watch, errors, questi
 
       <div className="space-y-3">
         <FormInput
-          placeholder="Escribe tu pregunta aquí..."
+          placeholder="Write your question here..."
           {...register(`questions.${qIndex}.text`)}
           error={errors.questions?.[qIndex]?.text?.message}
         />
@@ -317,7 +375,7 @@ const QuestionItem = ({ qIndex, control, register, remove, watch, errors, questi
               {...register(`questions.${qIndex}.required`)}
               className="w-4 h-4 text-primary-600"
             />
-            <span className="text-sm text-gray-700">Obligatoria</span>
+            <span className="text-sm text-gray-700">Required</span>
           </label>
         </div>
 
@@ -359,13 +417,13 @@ const OptionsManager = ({ value = [], onChange, error }) => {
 
   return (
     <div className="mt-3 space-y-2">
-      <label className="block text-sm font-medium text-gray-700">Opciones:</label>
+      <label className="block text-sm font-medium text-gray-700">Options:</label>
       {value.map((option, oIndex) => (
         <div key={oIndex} className="flex gap-2">
           <input
             type="text"
             className="input-field flex-1"
-            placeholder={`Opción ${oIndex + 1}`}
+            placeholder={`Option ${oIndex + 1}`}
             value={option}
             onChange={(e) => updateOption(oIndex, e.target.value)}
           />
@@ -383,7 +441,7 @@ const OptionsManager = ({ value = [], onChange, error }) => {
         onClick={addOption}
         className="btn-secondary text-sm"
       >
-        + Agregar Opción
+        + Add Option
       </button>
       {error && <p className="text-sm text-red-600">{error}</p>}
     </div>

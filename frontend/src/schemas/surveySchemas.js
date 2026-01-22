@@ -1,11 +1,11 @@
 import { z } from 'zod';
 
-// "Sndividual question" Validetion
+// Individual question validation
 const questionSchema = z.object({
   text: z
     .string()
-    .min(1, 'El texto de la pregunta es obligatorio')
-    .min(5, 'La pregunta debe tener al menos 5 caracteres'),
+    .min(1, 'Question text is required')
+    .min(5, 'Question must be at least 5 characters'),
   type: z.enum(['text', 'multiple', 'scale', 'date']),
   options: z
     .array(z.string())
@@ -14,21 +14,23 @@ const questionSchema = z.object({
   required: z.boolean().default(false)
 });
 
-// "MAIN SURVEY" validation
+// Main survey validation
 export const surveySchema = z.object({
   title: z
     .string()
-    .min(1, 'El título es obligatorio')
-    .min(5, 'El título debe tener al menos 5 caracteres')
-    .max(200, 'El título no puede exceder 200 caracteres'),
+    .min(1, 'Title is required')
+    .min(5, 'Title must be at least 5 characters')
+    .max(200, 'Title cannot exceed 200 characters'),
   description: z
     .string()
-    .max(1000, 'La descripción no puede exceder 1000 caracteres')
+    .max(1000, 'Description cannot exceed 1000 characters')
     .optional()
     .or(z.literal('')),
   settings: z.object({
     startDate: z.string().optional().or(z.literal('')),
     endDate: z.string().optional().or(z.literal('')),
+    startTime: z.string().optional().or(z.literal('')),
+    endTime: z.string().optional().or(z.literal('')),
     access: z.enum(['public', 'private', 'token']),
     maxResponses: z
       .union([z.string(), z.number()])
@@ -38,29 +40,32 @@ export const surveySchema = z.object({
         return typeof val === 'string' ? parseInt(val) : val;
       })
   }),
-  // CRÍTICO: Add question validation
+  
+  // Critical: Add question validation
   questions: z
     .array(questionSchema)
-    .min(1, 'Debes agregar al menos una pregunta')
+    .min(1, 'You must add at least one question')
 }).refine(data => {
-  // Date validation
+  // Date validation: end date must be after start date
   if (data.settings.startDate && data.settings.endDate) {
-    return new Date(data.settings.endDate) > new Date(data.settings.startDate);
+    const startDateTime = `${data.settings.startDate}T${data.settings.startTime || '00:00'}`;
+    const endDateTime = `${data.settings.endDate}T${data.settings.endTime || '23:59'}`;
+    return new Date(endDateTime) > new Date(startDateTime);
   }
   return true;
 }, {
-  message: 'La fecha de fin debe ser posterior a la fecha de inicio',
+  message: 'End date and time must be after start date and time',
   path: ['settings', 'endDate']
 }).refine(data => {
-  // "Multiple choise Questions" Validation
+  // Multiple choice questions validation
   const multipleQuestions = data.questions.filter(q => q.type === 'multiple');
   return multipleQuestions.every(q => {
-    // "Empty Options" Filter
+    // Filter empty options
     const validOptions = (q.options || []).filter(opt => opt && opt.trim() !== '');
     return validOptions.length >= 2;
   });
 }, {
-  message: 'Las preguntas de opción múltiple deben tener al menos 2 opciones válidas',
+  message: 'Multiple choice questions must have at least 2 valid options',
   path: ['questions']
 });
 
