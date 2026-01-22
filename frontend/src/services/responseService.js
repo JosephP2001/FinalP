@@ -1,33 +1,92 @@
-import api from './api';
+// frontend/src/services/responseService.js
 
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+/**
+ * Get authorization header with JWT token
+ */
+const getAuthHeader = () => {
+  const token = localStorage.getItem('token');
+  return {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  };
+};
+
+/**
+ * Response Service
+ * Handles all response-related API calls
+ */
 export const responseService = {
-  // Submit response to survey (WITH EMAIL)
-  async submitResponse(surveyId, data) {
-    console.log('📤 [SERVICE] Submitting response');
-    console.log('📤 [SERVICE] surveyId:', surveyId);
-    console.log('📤 [SERVICE] data:', data);
-    
-    const payload = {
-      surveyId,  
-      answers: data.answers,
-      respondentEmail: data.respondentEmail
-    };
-    
-    console.log('📤 [SERVICE] Final payload:', JSON.stringify(payload, null, 2));
-    
-    const response = await api.post('/responses', payload);
-    return response.data;
+  /**
+   * Submit a response to a survey
+   * @param {string} surveyId - Survey ID
+   * @param {Object} data - Response data (answers, respondentEmail)
+   * @returns {Promise} Response data
+   */
+  submitResponse: async (surveyId, data) => {
+    try {
+      console.log('[SERVICE] Submitting response');
+      console.log('[SERVICE] surveyId:', surveyId);
+      console.log('[SERVICE] data:', data);
+
+      const payload = {
+        surveyId,
+        ...data
+      };
+
+      console.log('[SERVICE] Final payload:', JSON.stringify(payload, null, 2));
+
+      const response = await axios.post(
+        `${API_URL}/responses`,
+        payload
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error('[SERVICE] Submit response error:', error);
+      throw error;
+    }
   },
 
-  // Get survey responses (PROTECTED)
-  async getSurveyResponses(surveyId) {
-    const response = await api.get(`/responses/survey/${surveyId}`);
-    return response.data;
+  /**
+   * Get all responses for a survey
+   * @param {string} surveyId - Survey ID
+   * @returns {Promise} Array of responses
+   */
+  getSurveyResponses: async (surveyId) => {
+    try {
+      const response = await axios.get(
+        `${API_URL}/responses/survey/${surveyId}`,
+        getAuthHeader()
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Get survey responses error:', error);
+      throw error;
+    }
   },
 
-  // Get survey statistics
-  async getSurveyStats(surveyId) {
-    const response = await api.get(`/responses/survey/${surveyId}/stats`);
-    return response.data;
+  /**
+   * Get statistics for a survey
+   * @param {string} surveyId - Survey ID
+   * @returns {Promise} Survey statistics
+   */
+  getSurveyStats: async (surveyId) => {
+    try {
+      const response = await axios.get(
+        `${API_URL}/responses/survey/${surveyId}/stats`,
+        getAuthHeader()
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Get survey stats error:', error);
+      throw error;
+    }
   }
 };
+
+export default responseService;
