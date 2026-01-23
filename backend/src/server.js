@@ -13,6 +13,7 @@ import authRoutes from './routes/authRoutes.js';
 import surveyRoutes from './routes/surveyRoutes.js';
 import responseRoutes from './routes/responseRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 
 dotenv.config();
 
@@ -49,7 +50,8 @@ app.use(passport.session());
 app.use('/api/auth', authRoutes);
 app.use('/api/surveys', surveyRoutes);
 app.use('/api/responses', responseRoutes);
-app.use('/api/admin', adminRoutes); // Admin routes
+app.use('/api/admin', adminRoutes);
+app.use('/api/ai', aiRoutes); // AI analysis routes
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -90,11 +92,11 @@ const startServer = async () => {
     startAutoClosureJob();
 
     app.listen(PORT, () => {
-      console.log(`✅ Server running on port ${PORT}`);
-      console.log(`⏰ Auto-closure cron job active`);
+      console.log(`Server running on port ${PORT}`);
+      console.log(`Auto-closure cron job active`);
     });
   } catch (error) {
-    console.error('❌ Server startup error:', error);
+    console.error('Sserver startup error:', error);
     process.exit(1);
   }
 };

@@ -6,12 +6,13 @@ import {
 } from 'recharts';
 import { 
   Download, FileDown, FileSpreadsheet, FileText, 
-  TrendingUp, Users, Calendar, ArrowLeft 
+  TrendingUp, Users, Calendar, ArrowLeft, Sparkles, X 
 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import { surveyService } from '../services/surveyService';
 import { responseService } from '../services/responseService';
 import { exportService } from '../services/exportService';
+import { aiService } from '../services/aiService';
 
 const SurveyResults = () => {
   const { id } = useParams();
@@ -20,6 +21,9 @@ const SurveyResults = () => {
   const [responses, setResponses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -61,6 +65,28 @@ const SurveyResults = () => {
     } catch (err) {
       console.error('Export error:', err);
       alert('Error al exportar: ' + err.message);
+    }
+  };
+
+  const handleGenerateAI = async () => {
+    try {
+      setAiLoading(true);
+      console.log('Generating AI analysis...');
+      
+      const result = await aiService.analyzeSurvey(id);
+      
+      if (result.success) {
+        setAiAnalysis(result.analysis);
+        setShowAiModal(true);
+        console.log('AI analysis generated');
+      } else {
+        throw new Error('Failed to generate analysis');
+      }
+    } catch (err) {
+      console.error('AI analysis error:', err);
+      alert('Error al generar análisis: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -114,34 +140,49 @@ const SurveyResults = () => {
               <p className="text-gray-600">{survey.description}</p>
             </div>
 
-            {/* Export Dropdown */}
-            <div className="relative group">
-              <button className="btn-primary flex items-center gap-2">
-                <Download size={20} />
-                <span>Exportar</span>
-              </button>
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              {/* AI Analysis Button */}
+              {responses.length > 0 && (
                 <button
-                  onClick={() => handleExport('csv')}
-                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                  onClick={handleGenerateAI}
+                  disabled={aiLoading}
+                  className="btn-secondary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <FileText size={18} className="text-green-600" />
-                  <span className="text-sm font-medium">CSV</span>
+                  <Sparkles size={20} className={aiLoading ? 'animate-spin' : ''} />
+                  <span>{aiLoading ? 'Generando...' : 'Análisis IA'}</span>
                 </button>
-                <button
-                  onClick={() => handleExport('excel')}
-                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
-                >
-                  <FileSpreadsheet size={18} className="text-blue-600" />
-                  <span className="text-sm font-medium">Excel</span>
+              )}
+
+              {/* Export Dropdown */}
+              <div className="relative group">
+                <button className="btn-primary flex items-center gap-2">
+                  <Download size={20} />
+                  <span>Exportar</span>
                 </button>
-                <button
-                  onClick={() => handleExport('pdf')}
-                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors rounded-b-lg"
-                >
-                  <FileDown size={18} className="text-red-600" />
-                  <span className="text-sm font-medium">PDF</span>
-                </button>
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                  <button
+                    onClick={() => handleExport('csv')}
+                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                  >
+                    <FileText size={18} className="text-green-600" />
+                    <span className="text-sm font-medium">CSV</span>
+                  </button>
+                  <button
+                    onClick={() => handleExport('excel')}
+                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                  >
+                    <FileSpreadsheet size={18} className="text-blue-600" />
+                    <span className="text-sm font-medium">Excel</span>
+                  </button>
+                  <button
+                    onClick={() => handleExport('pdf')}
+                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors rounded-b-lg"
+                  >
+                    <FileDown size={18} className="text-red-600" />
+                    <span className="text-sm font-medium">PDF</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -192,6 +233,14 @@ const SurveyResults = () => {
               Comparte el enlace de tu encuesta para empezar a recibir respuestas
             </p>
           </div>
+        )}
+
+        {/* AI Analysis Modal */}
+        {showAiModal && aiAnalysis && (
+          <AIAnalysisModal
+            analysis={aiAnalysis}
+            onClose={() => setShowAiModal(false)}
+          />
         )}
       </div>
     </div>
@@ -493,6 +542,152 @@ const getLastResponseDate = (responses) => {
     month: 'short', 
     day: 'numeric' 
   });
+};
+
+// AI Analysis Modal Component
+const AIAnalysisModal = ({ analysis, onClose }) => {
+  const getSentimentColor = (sentiment) => {
+    switch (sentiment.toLowerCase()) {
+      case 'positive':
+      case 'positivo':
+        return 'text-green-600 bg-green-50';
+      case 'negative':
+      case 'negativo':
+        return 'text-red-600 bg-red-50';
+      default:
+        return 'text-gray-600 bg-gray-50';
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-blue-600 p-6 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <Sparkles className="text-white" size={28} />
+            <h2 className="text-2xl font-bold text-white">Análisis con IA</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Summary */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
+              📋 Resumen General
+            </h3>
+            <p className="text-gray-700 leading-relaxed">{analysis.summary}</p>
+          </div>
+
+          {/* Key Insights */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              💡 Insights Clave
+            </h3>
+            <div className="space-y-3">
+              {analysis.keyInsights.map((insight, index) => (
+                <div key={index} className="flex gap-3">
+                  <span className="flex-shrink-0 w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-sm font-semibold">
+                    {index + 1}
+                  </span>
+                  <p className="text-gray-700 flex-1">{insight}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Sentiment Analysis */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              😊 Análisis de Sentimiento
+            </h3>
+            <div className="flex items-center gap-4 mb-4">
+              <div className={`px-4 py-2 rounded-full font-semibold ${getSentimentColor(analysis.sentiment.overall)}`}>
+                {analysis.sentiment.overall.toUpperCase()}
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-32 bg-gray-200 rounded-full h-3">
+                  <div
+                    className="bg-gradient-to-r from-purple-500 to-blue-500 h-3 rounded-full transition-all"
+                    style={{ width: `${analysis.sentiment.score}%` }}
+                  ></div>
+                </div>
+                <span className="text-gray-700 font-semibold">{analysis.sentiment.score}%</span>
+              </div>
+            </div>
+            <p className="text-gray-700">{analysis.sentiment.explanation}</p>
+          </div>
+
+          {/* Recommendations */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-green-900 mb-4 flex items-center gap-2">
+              🎯 Recomendaciones
+            </h3>
+            <div className="space-y-3">
+              {analysis.recommendations.map((recommendation, index) => (
+                <div key={index} className="flex gap-3">
+                  <span className="text-green-600">✓</span>
+                  <p className="text-gray-700 flex-1">{recommendation}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Statistics */}
+          {analysis.statistics && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                📊 Estadísticas
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">Total Respuestas</p>
+                  <p className="text-2xl font-bold text-gray-900">{analysis.statistics.totalResponses}</p>
+                </div>
+                {analysis.statistics.averagePerDay && (
+                  <div>
+                    <p className="text-sm text-gray-600">Promedio/Día</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {analysis.statistics.averagePerDay.toFixed(1)}
+                    </p>
+                  </div>
+                )}
+                {analysis.statistics.latestResponse && (
+                  <div className="col-span-2 md:col-span-1">
+                    <p className="text-sm text-gray-600">Última Respuesta</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {new Date(analysis.statistics.latestResponse).toLocaleDateString('es-EC')}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Generated timestamp */}
+          <div className="text-center text-xs text-gray-500">
+            Análisis generado el {new Date(analysis.generatedAt).toLocaleString('es-EC')}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="sticky bottom-0 bg-gray-50 p-4 border-t border-gray-200">
+          <button
+            onClick={onClose}
+            className="w-full btn-primary py-3"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default SurveyResults;
