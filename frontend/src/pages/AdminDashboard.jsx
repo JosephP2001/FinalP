@@ -2,14 +2,13 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import { authService } from '../services/authService';
-import { Shield, Users, FileText, TrendingUp } from 'lucide-react';
+import { Shield, FileText, TrendingUp } from 'lucide-react';
 import api from '../services/api';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [user] = useState(authService.getCurrentUser());
   const [stats, setStats] = useState({
-    totalUsers: 0,
     totalSurveys: 0,
     totalResponses: 0,
     activeSurveys: 0
@@ -41,7 +40,6 @@ const AdminDashboard = () => {
       const totalResponses = surveys.reduce((sum, s) => sum + (s.responseCount || 0), 0);
 
       setStats({
-        totalUsers: 'N/A', // Would need user endpoint
         totalSurveys: surveys.length,
         totalResponses,
         activeSurveys
@@ -81,8 +79,8 @@ const AdminDashboard = () => {
           <p className="text-gray-600">Vista completa del sistema de encuestas</p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Statistics Cards - Only 3 cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="card p-6 hover:shadow-lg transition-shadow">
             <div className="flex items-center justify-between">
               <div>
@@ -114,19 +112,7 @@ const AdminDashboard = () => {
                 <p className="text-3xl font-bold text-purple-600">{stats.totalResponses}</p>
               </div>
               <div className="p-4 bg-purple-100 rounded-full">
-                <Users className="text-purple-600" size={28} />
-              </div>
-            </div>
-          </div>
-
-          <div className="card p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Usuarios</p>
-                <p className="text-3xl font-bold text-blue-600">{stats.totalUsers}</p>
-              </div>
-              <div className="p-4 bg-blue-100 rounded-full">
-                <Users className="text-blue-600" size={28} />
+                <TrendingUp className="text-purple-600" size={28} />
               </div>
             </div>
           </div>

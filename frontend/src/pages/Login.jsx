@@ -29,14 +29,21 @@ const Login = () => {
     formState: { errors: registerErrors, isSubmitting: isRegisterSubmitting }
   } = useForm({
     resolver: zodResolver(registerSchema),
-    defaultValues: { name: '', email: '', password: '', role: 'user' } // ✅ Changed default
+    defaultValues: { name: '', email: '', password: '', role: 'user' }
   });
 
   const onLoginSubmit = async (data) => {
     setApiError('');
     try {
-      await authService.login(data.email, data.password);
-      navigate('/dashboard');
+      const response = await authService.login(data.email, data.password);
+      
+      // Redirect based on user role
+      const user = response.data.user;
+      if (user.role === 'admin') {
+        navigate('/admin'); // Admin goes to All Surveys dashboard
+      } else {
+        navigate('/dashboard'); // Regular user goes to personal dashboard
+      }
     } catch (err) {
       setApiError(err.response?.data?.message || 'Error al iniciar sesión');
     }
@@ -47,7 +54,7 @@ const Login = () => {
     try {
       // Always register as 'user' - admin is assigned manually in DB
       await authService.register(data.name, data.email, data.password, 'user');
-      navigate('/dashboard');
+      navigate('/dashboard'); // New users always go to dashboard
     } catch (err) {
       setApiError(err.response?.data?.message || 'Error al registrarse');
     }
@@ -191,9 +198,6 @@ const Login = () => {
                   error={registerErrors.password?.message}
                   disabled={isRegisterSubmitting}
                 />
-
-                {/* Removed role selector - all new users are 'user' by default */}
-                {/* Admin role is assigned manually in database */}
 
                 <button
                   type="submit"

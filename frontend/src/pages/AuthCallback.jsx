@@ -1,63 +1,56 @@
-import { useEffect, useState } from 'react';
+// frontend/src/pages/AuthCallback.jsx
+
+import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { authService } from '../services/authService';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [error, setError] = useState('');
 
   useEffect(() => {
-    const handleOAuthCallback = () => {
+    const handleCallback = async () => {
       try {
         const token = searchParams.get('token');
-        const userStr = searchParams.get('user');
-        const errorParam = searchParams.get('error');
+        const user = searchParams.get('user');
 
-        if (errorParam) {
-          setError(`Error de autenticación: ${errorParam}`);
-          setTimeout(() => navigate('/login'), 3000);
+        if (!token || !user) {
+          console.error('Missing token or user data');
+          navigate('/login');
           return;
         }
 
-        if (token && userStr) {
-          localStorage.setItem('token', token);
-          localStorage.setItem('user', decodeURIComponent(userStr));
-          navigate('/dashboard');
+        // Parse user data
+        const userData = JSON.parse(decodeURIComponent(user));
+
+        // Store authentication data
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(userData));
+
+        console.log('OAuth authentication successful');
+        console.log('User role:', userData.role);
+
+        // Redirect based on user role
+        if (userData.role === 'admin') {
+          navigate('/admin'); // Admin goes to All Surveys dashboard
         } else {
-          setError('Token o usuario no recibido');
-          setTimeout(() => navigate('/login'), 3000);
+          navigate('/dashboard'); // Regular user goes to personal dashboard
         }
-      } catch (err) {
-        console.error('OAuth callback error:', err);
-        setError('Error procesando autenticación');
-        setTimeout(() => navigate('/login'), 3000);
+      } catch (error) {
+        console.error('OAuth callback error:', error);
+        navigate('/login');
       }
     };
 
-    handleOAuthCallback();
-  }, [searchParams, navigate]);
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-md w-full text-center">
-          <div className="text-6xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Error</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <p className="text-sm text-gray-500">Redirigiendo...</p>
-        </div>
-      </div>
-    );
-  }
+    handleCallback();
+  }, [navigate, searchParams]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center">
-      <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-md w-full text-center">
-        <div className="text-6xl mb-4 animate-spin">⚙️</div>
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">
-          Autenticando...
-        </h2>
-        <p className="text-gray-600">Por favor espera</p>
+    <div className="min-h-screen bg-gradient-to-br from-primary-500 via-purple-500 to-secondary-500 flex items-center justify-center">
+      <div className="text-center">
+        <div className="text-6xl mb-4 animate-bounce">📊</div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+        <p className="text-white text-lg font-medium">Completing authentication...</p>
       </div>
     </div>
   );
