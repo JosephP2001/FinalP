@@ -12,11 +12,11 @@ export const cacheMiddleware = (duration = 3600) => {
       const cachedData = await cacheGet(key);
       
       if (cachedData) {
-        console.log(`✅ Cache HIT: ${key}`);
+        console.log(`Cache HIT: ${key}`);
         return res.json(cachedData);
       }
 
-      console.log(`❌ Cache MISS: ${key}`);
+      console.log(`Cache MISS: ${key}`);
 
       const originalJson = res.json.bind(res);
       res.json = (body) => {
