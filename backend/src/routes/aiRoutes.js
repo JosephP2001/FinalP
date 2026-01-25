@@ -12,9 +12,59 @@ const router = express.Router();
 router.use(protect);
 
 /**
- * @route   POST /api/ai/analyze-survey/:surveyId
- * @desc    Analyze full survey with AI
- * @access  Private
+ * @swagger
+ * /api/ai/analyze-survey/{surveyId}:
+ *   post:
+ *     summary: Analyze full survey with AI (Groq)
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: surveyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Survey ID to analyze
+ *     responses:
+ *       200:
+ *         description: AI analysis completed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 analysis:
+ *                   type: object
+ *                   properties:
+ *                     summary:
+ *                       type: string
+ *                     keyInsights:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     sentiment:
+ *                       type: object
+ *                       properties:
+ *                         overall:
+ *                           type: string
+ *                         score:
+ *                           type: number
+ *                         explanation:
+ *                           type: string
+ *                     recommendations:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *       400:
+ *         description: No responses available for analysis
+ *       403:
+ *         description: Not authorized to analyze this survey
+ *       404:
+ *         description: Survey not found
  */
 router.post('/analyze-survey/:surveyId', async (req, res) => {
   try {

@@ -20,37 +20,126 @@ router.use(protect);
 router.use(isAdmin);
 
 /**
- * @route   GET /api/admin/stats
- * @desc    Get admin dashboard statistics
- * @access  Private/Admin
+ * @swagger
+ * /api/admin/stats:
+ *   get:
+ *     summary: Get admin dashboard statistics
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Statistics retrieved successfully
+ *       403:
+ *         description: Admin access required
  */
 router.get('/stats', getAdminStats);
 
 /**
- * @route   GET /api/admin/users
- * @desc    Get all users with their statistics
- * @access  Private/Admin
+ * @swagger
+ * /api/admin/users:
+ *   get:
+ *     summary: Get all users with their statistics
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Users list retrieved successfully
+ *       403:
+ *         description: Admin access required
  */
 router.get('/users', getAllUsers);
 
 /**
- * @route   GET /api/admin/users/:id
- * @desc    Get detailed information about a specific user
- * @access  Private/Admin
+ * @swagger
+ * /api/admin/users/{id}:
+ *   get:
+ *     summary: Get detailed information about a specific user
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User details retrieved
+ *       404:
+ *         description: User not found
+ *       403:
+ *         description: Admin access required
  */
 router.get('/users/:id', getUserDetails);
 
 /**
- * @route   DELETE /api/admin/users/:id
- * @desc    Delete a user and all their related data
- * @access  Private/Admin
+ * @swagger
+ * /api/admin/users/{id}:
+ *   delete:
+ *     summary: Delete a user and all their related data
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User deleted successfully
+ *       400:
+ *         description: Cannot delete yourself
+ *       404:
+ *         description: User not found
+ *       403:
+ *         description: Admin access required
  */
 router.delete('/users/:id', deleteUser);
 
 /**
- * @route   PATCH /api/admin/users/:id/role
- * @desc    Update user role (user <-> admin)
- * @access  Private/Admin
+ * @swagger
+ * /api/admin/users/{id}/role:
+ *   patch:
+ *     summary: Update user role (user <-> admin)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - role
+ *             properties:
+ *               role:
+ *                 type: string
+ *                 enum: [user, admin]
+ *                 example: admin
+ *     responses:
+ *       200:
+ *         description: User role updated successfully
+ *       400:
+ *         description: Invalid role or cannot change own role
+ *       404:
+ *         description: User not found
+ *       403:
+ *         description: Admin access required
  */
 router.patch('/users/:id/role', updateUserRole);
 

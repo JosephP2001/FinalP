@@ -3,10 +3,12 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import morgan from 'morgan';
 import session from 'express-session';
+import swaggerUi from 'swagger-ui-express';
 import passport from './config/passport.js';
 import { connectDB } from './config/database.js';
 import { connectRedis } from './config/redis.js';
 import { startAutoClosureJob } from './services/surveyClosureService.js';
+import swaggerSpec from './config/swagger.js';
 
 // Routes
 import authRoutes from './routes/authRoutes.js';
@@ -46,12 +48,18 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Swagger Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'UCE Survey API Docs'
+}));
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/surveys', surveyRoutes);
 app.use('/api/responses', responseRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/ai', aiRoutes); // AI analysis routes
+app.use('/api/ai', aiRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -92,11 +100,12 @@ const startServer = async () => {
     startAutoClosureJob();
 
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log(`Auto-closure cron job active`);
+      console.log(`✅ Server running on port ${PORT}`);
+      console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
+      console.log(`⏰ Auto-closure cron job active`);
     });
   } catch (error) {
-    console.error('Sserver startup error:', error);
+    console.error('❌ Server startup error:', error);
     process.exit(1);
   }
 };
