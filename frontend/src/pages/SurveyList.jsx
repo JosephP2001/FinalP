@@ -1,12 +1,9 @@
-/*Correct folfer :( :( !!!!!!!! (DONE)
-*Real data  (DONE)
-*/
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import { Search, Plus, Eye, Edit, Share2, Trash2, Copy } from 'lucide-react';
 import { surveyService } from '../services/surveyService';
+import { CardSkeleton } from '../components/common/Skeleton';
 
 const SurveyList = () => {
   const [surveys, setSurveys] = useState([]);
@@ -39,7 +36,6 @@ const SurveyList = () => {
   const filterSurveys = () => {
     let filtered = surveys;
 
-    // Filtrar por búsqueda
     if (searchTerm) {
       filtered = filtered.filter(survey =>
         survey.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -47,7 +43,6 @@ const SurveyList = () => {
       );
     }
 
-    // Filtrar por estado
     if (statusFilter !== 'all') {
       filtered = filtered.filter(survey => survey.status === statusFilter);
     }
@@ -98,20 +93,6 @@ const SurveyList = () => {
     if (diffDays < 30) return `Hace ${Math.floor(diffDays / 7)} semanas`;
     return `Hace ${Math.floor(diffDays / 30)} meses`;
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-center">
-            <div className="text-6xl mb-4 animate-spin">⚙️</div>
-            <p className="text-gray-600">Cargando encuestas...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -165,8 +146,15 @@ const SurveyList = () => {
           </select>
         </div>
 
-        {/* Empty State */}
-        {filteredSurveys.length === 0 && !loading && (
+        {/* Loading State with Skeletons */}
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <CardSkeleton key={i} />
+            ))}
+          </div>
+        ) : filteredSurveys.length === 0 ? (
+          /* Empty State */
           <div className="text-center py-12">
             <div className="text-6xl mb-4">📋</div>
             <h3 className="text-xl font-semibold text-gray-700 mb-2">
@@ -187,127 +175,127 @@ const SurveyList = () => {
               </Link>
             )}
           </div>
-        )}
+        ) : (
+          /* Survey Cards Grid */
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {filteredSurveys.map((survey) => {
+              const percentage = survey.settings?.maxResponses 
+                ? Math.round((survey.responseCount / survey.settings.maxResponses) * 100)
+                : 0;
 
-        {/* Survey Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredSurveys.map((survey) => {
-            const percentage = survey.settings?.maxResponses 
-              ? Math.round((survey.responseCount / survey.settings.maxResponses) * 100)
-              : 0;
-
-            return (
-              <div key={survey._id} className="card hover:shadow-lg transition-shadow">
-                {/* Card Header */}
-                <div className="flex justify-between items-start mb-3">
-                  {getStatusBadge(survey.status)}
-                  <span className="text-sm text-gray-500">
-                    {getTimeAgo(survey.createdAt)}
-                  </span>
-                </div>
-
-                {/* Title and Description */}
-                <h3 className="text-xl font-bold text-gray-800 mb-2">
-                  {survey.title}
-                </h3>
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                  {survey.description || 'Sin descripción'}
-                </p>
-
-                {/* Stats */}
-                <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                  <div className="grid grid-cols-2 gap-4 mb-3">
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Respuestas</p>
-                      <p className="text-lg font-bold text-gray-800">
-                        {survey.responseCount || 0}
-                        {survey.settings?.maxResponses && ` / ${survey.settings.maxResponses}`}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Preguntas</p>
-                      <p className="text-lg font-bold text-gray-800">
-                        {survey.questions?.length || 0}
-                      </p>
-                    </div>
+              return (
+                <div key={survey._id} className="card hover:shadow-lg transition-shadow">
+                  {/* Card Header */}
+                  <div className="flex justify-between items-start mb-3">
+                    {getStatusBadge(survey.status)}
+                    <span className="text-sm text-gray-500">
+                      {getTimeAgo(survey.createdAt)}
+                    </span>
                   </div>
 
-                  {/* Progress Bar */}
-                  {survey.settings?.maxResponses && (
-                    <>
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="text-gray-600">Progreso</span>
-                        <span className="text-gray-600 font-semibold">{percentage}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full transition-all ${
-                            survey.status === 'active' ? 'bg-primary-500' : 'bg-gray-400'
-                          }`}
-                          style={{ width: `${Math.min(percentage, 100)}%` }}
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
+                  {/* Title and Description */}
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">
+                    {survey.title}
+                  </h3>
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                    {survey.description || 'Sin descripción'}
+                  </p>
 
-                {/* Actions */}
-                <div className="flex gap-2">
-                  <Link to={`/surveys/${survey._id}/results`} className="flex-1">
-                    <button className="btn-primary w-full flex items-center justify-center space-x-2">
-                      <Eye size={18} />
-                      <span>Resultados</span>
-                    </button>
-                  </Link>
-                  
-                  <button 
-                    onClick={() => copyShareLink(survey._id)}
-                    className="btn-secondary px-4 flex items-center justify-center"
-                    title="Copiar enlace para compartir"
-                  >
-                    <Copy size={18} />
-                  </button>
+                  {/* Stats */}
+                  <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                    <div className="grid grid-cols-2 gap-4 mb-3">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Respuestas</p>
+                        <p className="text-lg font-bold text-gray-800">
+                          {survey.responseCount || 0}
+                          {survey.settings?.maxResponses && ` / ${survey.settings.maxResponses}`}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Preguntas</p>
+                        <p className="text-lg font-bold text-gray-800">
+                          {survey.questions?.length || 0}
+                        </p>
+                      </div>
+                    </div>
 
-                  {survey.status === 'draft' && (
-                    <Link to={`/surveys/${survey._id}/edit`}>
-                      <button className="btn-secondary px-4 flex items-center justify-center">
-                        <Edit size={18} />
+                    {/* Progress Bar */}
+                    {survey.settings?.maxResponses && (
+                      <>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-gray-600">Progreso</span>
+                          <span className="text-gray-600 font-semibold">{percentage}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all ${
+                              survey.status === 'active' ? 'bg-primary-500' : 'bg-gray-400'
+                            }`}
+                            style={{ width: `${Math.min(percentage, 100)}%` }}
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    <Link to={`/surveys/${survey._id}/results`} className="flex-1">
+                      <button className="btn-primary w-full flex items-center justify-center space-x-2">
+                        <Eye size={18} />
+                        <span>Resultados</span>
                       </button>
                     </Link>
-                  )}
+                    
+                    <button 
+                      onClick={() => copyShareLink(survey._id)}
+                      className="btn-secondary px-4 flex items-center justify-center"
+                      title="Copiar enlace para compartir"
+                    >
+                      <Copy size={18} />
+                    </button>
 
-                  <button 
-                    onClick={() => handleDelete(survey._id)}
-                    className="btn-secondary px-4 flex items-center justify-center text-red-600 hover:bg-red-50"
-                    title="Eliminar encuesta"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+                    {survey.status === 'draft' && (
+                      <Link to={`/surveys/${survey._id}/edit`}>
+                        <button className="btn-secondary px-4 flex items-center justify-center">
+                          <Edit size={18} />
+                        </button>
+                      </Link>
+                    )}
 
-          {/* Create New Card - Solo si hay encuestas */}
-          {filteredSurveys.length > 0 && (
-            <Link to="/surveys/create">
-              <div className="card border-2 border-dashed border-gray-300 hover:border-primary-500 transition-colors cursor-pointer">
-                <div className="text-center py-12">
-                  <div className="text-6xl mb-4">📝</div>
-                  <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                    Crear Nueva Encuesta
-                  </h3>
-                  <p className="text-gray-500">
-                    Comienza a recolectar datos valiosos
-                  </p>
-                  <button className="btn-primary mt-4">
-                    + Nueva Encuesta
-                  </button>
+                    <button 
+                      onClick={() => handleDelete(survey._id)}
+                      className="btn-secondary px-4 flex items-center justify-center text-red-600 hover:bg-red-50"
+                      title="Eliminar encuesta"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </Link>
-          )}
-        </div>
+              );
+            })}
+
+            {/* Create New Card - Solo si hay encuestas */}
+            {filteredSurveys.length > 0 && (
+              <Link to="/surveys/create">
+                <div className="card border-2 border-dashed border-gray-300 hover:border-primary-500 transition-colors cursor-pointer">
+                  <div className="text-center py-12">
+                    <div className="text-6xl mb-4">📝</div>
+                    <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                      Crear Nueva Encuesta
+                    </h3>
+                    <p className="text-gray-500">
+                      Comienza a recolectar datos valiosos
+                    </p>
+                    <button className="btn-primary mt-4">
+                      + Nueva Encuesta
+                    </button>
+                  </div>
+                </div>
+              </Link>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -13,6 +13,7 @@ import { surveyService } from '../services/surveyService';
 import { responseService } from '../services/responseService';
 import { exportService } from '../services/exportService';
 import { aiService } from '../services/aiService';
+import { StatsCardSkeleton, QuestionResultsSkeleton } from '../components/common/Skeleton';
 
 const SurveyResults = () => {
   const { id } = useParams();
@@ -71,7 +72,7 @@ const SurveyResults = () => {
   const handleGenerateAI = async () => {
     try {
       setAiLoading(true);
-      console.log('Generating AI analysis...');
+      console.log('🤖 Generating AI analysis...');
       
       const result = await aiService.analyzeSurvey(id);
       
@@ -94,10 +95,27 @@ const SurveyResults = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Cargando resultados...</p>
+        <div className="container mx-auto px-6 py-8 max-w-6xl">
+          {/* Header Skeleton */}
+          <div className="mb-8 space-y-4">
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-200 rounded w-64 mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded w-96"></div>
+            </div>
+          </div>
+
+          {/* Stats Cards Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <StatsCardSkeleton />
+            <StatsCardSkeleton />
+            <StatsCardSkeleton />
+          </div>
+
+          {/* Questions Skeleton */}
+          <div className="space-y-6">
+            <QuestionResultsSkeleton />
+            <QuestionResultsSkeleton />
+            <QuestionResultsSkeleton />
           </div>
         </div>
       </div>
@@ -257,7 +275,7 @@ const StatCard = ({ icon: Icon, label, value, color }) => {
   };
 
   return (
-    <div className="card p-6">
+    <div className="card">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-gray-600 mb-1">{label}</p>
@@ -273,7 +291,6 @@ const StatCard = ({ icon: Icon, label, value, color }) => {
 
 // Question Results Component
 const QuestionResults = ({ question, questionNumber, responses }) => {
-  // Get all answers for this question
   const answers = responses
     .map(r => r.answers.find(a => a.questionId === question._id))
     .filter(Boolean);
@@ -294,7 +311,7 @@ const QuestionResults = ({ question, questionNumber, responses }) => {
   };
 
   return (
-    <div className="card p-6">
+    <div className="card">
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-2">
           {questionNumber}. {question.text}
@@ -315,19 +332,16 @@ const QuestionResults = ({ question, questionNumber, responses }) => {
 
 // Multiple Choice Chart Component
 const MultipleChoiceChart = ({ question, answers }) => {
-  // Count responses per option
   const data = question.options.map(option => ({
     name: option,
     value: answers.filter(a => a.value === option).length
   }));
 
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
-
   const total = answers.length;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Bar Chart */}
       <div>
         <h4 className="text-sm font-medium text-gray-700 mb-4">Distribución</h4>
         <ResponsiveContainer width="100%" height={300}>
@@ -341,7 +355,6 @@ const MultipleChoiceChart = ({ question, answers }) => {
         </ResponsiveContainer>
       </div>
 
-      {/* Pie Chart */}
       <div>
         <h4 className="text-sm font-medium text-gray-700 mb-4">Porcentajes</h4>
         <ResponsiveContainer width="100%" height={300}>
@@ -365,22 +378,15 @@ const MultipleChoiceChart = ({ question, answers }) => {
         </ResponsiveContainer>
       </div>
 
-      {/* Table */}
       <div className="lg:col-span-2">
         <h4 className="text-sm font-medium text-gray-700 mb-4">Resumen</h4>
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                  Opción
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                  Respuestas
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                  Porcentaje
-                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Opción</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Respuestas</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Porcentaje</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -403,7 +409,6 @@ const MultipleChoiceChart = ({ question, answers }) => {
 
 // Scale Chart Component
 const ScaleChart = ({ answers }) => {
-  // Count responses per scale value (1-10)
   const scaleCounts = {};
   for (let i = 1; i <= 10; i++) {
     scaleCounts[i] = 0;
@@ -421,7 +426,6 @@ const ScaleChart = ({ answers }) => {
     count: value
   }));
 
-  // Calculate statistics
   const values = answers.map(a => parseInt(a.value));
   const avg = values.reduce((a, b) => a + b, 0) / values.length;
   const sorted = [...values].sort((a, b) => a - b);
@@ -432,7 +436,6 @@ const ScaleChart = ({ answers }) => {
 
   return (
     <div>
-      {/* Statistics */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-blue-50 rounded-lg p-4 text-center">
           <p className="text-sm text-gray-600">Promedio</p>
@@ -448,7 +451,6 @@ const ScaleChart = ({ answers }) => {
         </div>
       </div>
 
-      {/* Bar Chart */}
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" />
@@ -489,7 +491,6 @@ const TextResponses = ({ answers }) => {
 
 // Date Responses Component
 const DateResponses = ({ answers }) => {
-  // Group by date
   const dateCounts = {};
   answers.forEach(a => {
     const date = new Date(a.value).toLocaleDateString('es-EC');
@@ -562,7 +563,6 @@ const AIAnalysisModal = ({ analysis, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-blue-600 p-6 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <Sparkles className="text-white" size={28} />
@@ -577,7 +577,6 @@ const AIAnalysisModal = ({ analysis, onClose }) => {
         </div>
 
         <div className="p-6 space-y-6">
-          {/* Summary */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
               📋 Resumen General
@@ -585,7 +584,6 @@ const AIAnalysisModal = ({ analysis, onClose }) => {
             <p className="text-gray-700 leading-relaxed">{analysis.summary}</p>
           </div>
 
-          {/* Key Insights */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
               💡 Insights Clave
@@ -602,7 +600,6 @@ const AIAnalysisModal = ({ analysis, onClose }) => {
             </div>
           </div>
 
-          {/* Sentiment Analysis */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
               😊 Análisis de Sentimiento
@@ -624,7 +621,6 @@ const AIAnalysisModal = ({ analysis, onClose }) => {
             <p className="text-gray-700">{analysis.sentiment.explanation}</p>
           </div>
 
-          {/* Recommendations */}
           <div className="bg-green-50 border border-green-200 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-green-900 mb-4 flex items-center gap-2">
               🎯 Recomendaciones
@@ -639,7 +635,6 @@ const AIAnalysisModal = ({ analysis, onClose }) => {
             </div>
           </div>
 
-          {/* Statistics */}
           {analysis.statistics && (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -670,13 +665,11 @@ const AIAnalysisModal = ({ analysis, onClose }) => {
             </div>
           )}
 
-          {/* Generated timestamp */}
           <div className="text-center text-xs text-gray-500">
             Análisis generado el {new Date(analysis.generatedAt).toLocaleString('es-EC')}
           </div>
         </div>
 
-        {/* Footer */}
         <div className="sticky bottom-0 bg-gray-50 p-4 border-t border-gray-200">
           <button
             onClick={onClose}

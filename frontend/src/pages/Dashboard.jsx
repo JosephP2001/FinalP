@@ -1,13 +1,10 @@
-/*Rebuilded (DONE)
-*Real Stadistics from MongoDB
-*/
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import { BarChart3, Users, FileText, TrendingUp, Eye, Plus } from 'lucide-react';
 import { surveyService } from '../services/surveyService';
 import { authService } from '../services/authService';
+import { StatsCardSkeleton, RecentSurveySkeleton } from '../components/common/Skeleton';
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -28,19 +25,15 @@ const Dashboard = () => {
     try {
       setLoading(true);
       
-      // Obtener usuario actual
       const currentUser = authService.getCurrentUser();
       setUser(currentUser);
 
-      // Obtener todas las encuestas del usuario
       const { data: surveys } = await surveyService.getMySurveys();
 
-      // Calcular estadísticas
       const totalSurveys = surveys.length;
       const activeSurveys = surveys.filter(s => s.status === 'active').length;
       const totalResponses = surveys.reduce((sum, s) => sum + (s.responseCount || 0), 0);
       
-      // Calcular tasa promedio de respuesta
       const surveysWithMax = surveys.filter(s => s.settings?.maxResponses);
       const avgResponseRate = surveysWithMax.length > 0
         ? surveysWithMax.reduce((sum, s) => {
@@ -56,7 +49,6 @@ const Dashboard = () => {
         avgResponseRate: Math.round(avgResponseRate)
       });
 
-      // Obtener encuestas recientes (últimas 5)
       setRecentSurveys(surveys.slice(0, 5));
 
     } catch (error) {
@@ -85,20 +77,6 @@ const Dashboard = () => {
     return `Hace ${Math.floor(diffDays / 7)} semanas`;
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-center">
-            <div className="text-6xl mb-4 animate-spin">⚙️</div>
-            <p className="text-gray-600">Cargando dashboard...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -106,83 +84,101 @@ const Dashboard = () => {
       <div className="container mx-auto px-6 py-8">
         {/* Welcome Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            {getGreeting()}, {user?.name?.split(' ')[0] || 'Usuario'} 👋
-          </h1>
-          <p className="text-gray-600">
-            Aquí está el resumen de tus encuestas
-          </p>
+          {loading ? (
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-200 rounded w-64 mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded w-48"></div>
+            </div>
+          ) : (
+            <>
+              <h1 className="text-3xl font-bold text-gray-800 mb-2">
+                {getGreeting()}, {user?.name?.split(' ')[0] || 'Usuario'} 👋
+              </h1>
+              <p className="text-gray-600">
+                Aquí está el resumen de tus encuestas
+              </p>
+            </>
+          )}
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Total Surveys */}
-          <div className="card p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Total Encuestas</p>
-                <p className="text-3xl font-bold text-gray-800">{stats.totalSurveys}</p>
-              </div>
-              <div className="p-4 bg-primary-100 rounded-full">
-                <FileText className="text-primary-600" size={28} />
-              </div>
-            </div>
-            <div className="mt-4 text-sm text-gray-500">
-              {stats.activeSurveys} activas
-            </div>
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <StatsCardSkeleton />
+            <StatsCardSkeleton />
+            <StatsCardSkeleton />
+            <StatsCardSkeleton />
           </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {/* Total Surveys */}
+            <div className="card hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Total Encuestas</p>
+                  <p className="text-3xl font-bold text-gray-800">{stats.totalSurveys}</p>
+                </div>
+                <div className="p-4 bg-primary-100 rounded-full">
+                  <FileText className="text-primary-600" size={28} />
+                </div>
+              </div>
+              <div className="mt-4 text-sm text-gray-500">
+                {stats.activeSurveys} activas
+              </div>
+            </div>
 
-          {/* Active Surveys */}
-          <div className="card p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Encuestas Activas</p>
-                <p className="text-3xl font-bold text-green-600">{stats.activeSurveys}</p>
+            {/* Active Surveys */}
+            <div className="card hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Encuestas Activas</p>
+                  <p className="text-3xl font-bold text-green-600">{stats.activeSurveys}</p>
+                </div>
+                <div className="p-4 bg-green-100 rounded-full">
+                  <TrendingUp className="text-green-600" size={28} />
+                </div>
               </div>
-              <div className="p-4 bg-green-100 rounded-full">
-                <TrendingUp className="text-green-600" size={28} />
+              <div className="mt-4 text-sm text-gray-500">
+                Recopilando respuestas
               </div>
             </div>
-            <div className="mt-4 text-sm text-gray-500">
-              Recopilando respuestas
-            </div>
-          </div>
 
-          {/* Total Responses */}
-          <div className="card p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Total Respuestas</p>
-                <p className="text-3xl font-bold text-purple-600">{stats.totalResponses}</p>
+            {/* Total Responses */}
+            <div className="card hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Total Respuestas</p>
+                  <p className="text-3xl font-bold text-purple-600">{stats.totalResponses}</p>
+                </div>
+                <div className="p-4 bg-purple-100 rounded-full">
+                  <Users className="text-purple-600" size={28} />
+                </div>
               </div>
-              <div className="p-4 bg-purple-100 rounded-full">
-                <Users className="text-purple-600" size={28} />
+              <div className="mt-4 text-sm text-gray-500">
+                Datos recopilados
               </div>
             </div>
-            <div className="mt-4 text-sm text-gray-500">
-              Datos recopilados
-            </div>
-          </div>
 
-          {/* Average Response Rate */}
-          <div className="card p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Tasa Promedio</p>
-                <p className="text-3xl font-bold text-blue-600">{stats.avgResponseRate}%</p>
+            {/* Average Response Rate */}
+            <div className="card hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Tasa Promedio</p>
+                  <p className="text-3xl font-bold text-blue-600">{stats.avgResponseRate}%</p>
+                </div>
+                <div className="p-4 bg-blue-100 rounded-full">
+                  <BarChart3 className="text-blue-600" size={28} />
+                </div>
               </div>
-              <div className="p-4 bg-blue-100 rounded-full">
-                <BarChart3 className="text-blue-600" size={28} />
+              <div className="mt-4 text-sm text-gray-500">
+                De completitud
               </div>
-            </div>
-            <div className="mt-4 text-sm text-gray-500">
-              De completitud
             </div>
           </div>
-        </div>
+        )}
 
         {/* Quick Actions */}
-        <div className="card p-6 mb-8">
+        <div className="card mb-8">
           <h2 className="text-xl font-bold text-gray-800 mb-4">Acciones Rápidas</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Link to="/surveys/create">
@@ -205,7 +201,7 @@ const Dashboard = () => {
         </div>
 
         {/* Recent Surveys */}
-        <div className="card p-6">
+        <div className="card">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-gray-800">Encuestas Recientes</h2>
             <Link to="/surveys" className="text-primary-600 hover:text-primary-700 text-sm font-semibold">
@@ -213,7 +209,9 @@ const Dashboard = () => {
             </Link>
           </div>
 
-          {recentSurveys.length === 0 ? (
+          {loading ? (
+            <RecentSurveySkeleton count={5} />
+          ) : recentSurveys.length === 0 ? (
             <div className="text-center py-8">
               <div className="text-6xl mb-4">📋</div>
               <p className="text-gray-600 mb-4">Aún no tienes encuestas</p>

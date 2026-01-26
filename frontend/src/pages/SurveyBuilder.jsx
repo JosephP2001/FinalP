@@ -42,15 +42,13 @@ const SurveyBuilder = () => {
     name: 'questions'
   });
 
-  // Debugging: Log validation errors
   useEffect(() => {
     if (Object.keys(errors).length > 0) {
-      console.log(' Validation Errors:', errors);
-      console.log(' Errors stringified:', JSON.stringify(errors, null, 2));
+      console.log('⚠️ Validation Errors:', errors);
+      console.log('⚠️ Errors stringified:', JSON.stringify(errors, null, 2));
     }
   }, [errors]);
 
-  // Debugging: Watch form data changes
   useEffect(() => {
     const subscription = watch((value) => {
       console.log('Form data changed:', value);
@@ -74,22 +72,11 @@ const SurveyBuilder = () => {
     });
   };
 
-  /**
-   * Combine date and time into a proper ISO string
-   * @param {string} date - Date in format YYYY-MM-DD
-   * @param {string} time - Time in format HH:MM
-   * @returns {string} ISO date string
-   */
   const combineDateAndTime = (date, time) => {
     if (!date) return null;
     
-    // If no time provided, use default
     const timeValue = time || '00:00';
-    
-    // Create date string in local timezone
     const dateTimeString = `${date}T${timeValue}:00`;
-    
-    // Parse as local time and convert to ISO
     const dateObj = new Date(dateTimeString);
     
     console.log(`Combining: ${date} ${timeValue} -> ${dateObj.toISOString()}`);
@@ -104,25 +91,22 @@ const SurveyBuilder = () => {
       
       setApiError('');
 
-      // Validate at least one question
       if (data.questions.length === 0) {
-        console.log('[SUBMIT] No questions!');
+        console.log(' [SUBMIT] No questions!');
         setApiError('You must add at least one question');
         return;
       }
 
-      // Validate multiple choice questions
       const invalidMultiple = data.questions.filter(
         q => q.type === 'multiple' && (!q.options || q.options.length < 2)
       );
 
       if (invalidMultiple.length > 0) {
-        console.log('❌ [SUBMIT] Invalid multiple choice questions:', invalidMultiple);
+        console.log(' [SUBMIT] Invalid multiple choice questions:', invalidMultiple);
         setApiError('Multiple choice questions must have at least 2 options');
         return;
       }
 
-      // Prepare data with combined date/time
       const surveyData = {
         title: data.title,
         description: data.description,
@@ -130,7 +114,6 @@ const SurveyBuilder = () => {
         settings: {
           access: data.settings.access,
           maxResponses: data.settings.maxResponses ? parseInt(data.settings.maxResponses) : undefined,
-          // Combine date and time properly
           startDate: combineDateAndTime(data.settings.startDate, data.settings.startTime),
           endDate: combineDateAndTime(data.settings.endDate, data.settings.endTime)
         },
@@ -140,11 +123,11 @@ const SurveyBuilder = () => {
         }))
       };
 
-      console.log('[SUBMIT] Sending to API:', JSON.stringify(surveyData, null, 2));
+      console.log(' [SUBMIT] Sending to API:', JSON.stringify(surveyData, null, 2));
 
       await surveyService.createSurvey(surveyData);
 
-      console.log('[SUBMIT] Success!');
+      console.log(' [SUBMIT] Success!');
 
       alert(publishNow 
         ? 'Survey published successfully!' 
@@ -153,8 +136,8 @@ const SurveyBuilder = () => {
 
       navigate('/surveys');
     } catch (err) {
-      console.error('❌ [SUBMIT] Error:', err);
-      console.error('❌ [SUBMIT] Error response:', err.response?.data);
+      console.error(' [SUBMIT] Error:', err);
+      console.error(' [SUBMIT] Error response:', err.response?.data);
       setApiError(err.response?.data?.message || 'Error creating survey');
     }
   };
@@ -177,7 +160,7 @@ const SurveyBuilder = () => {
 
         <form>
           {/* General Information */}
-          <div className="card p-6 mb-6">
+          <div className="card mb-6">
             <h2 className="text-xl font-bold text-gray-800 mb-4">General Information</h2>
 
             <div className="space-y-4">
@@ -263,7 +246,7 @@ const SurveyBuilder = () => {
           </div>
 
           {/* Questions */}
-          <div className="card p-6 mb-6">
+          <div className="card mb-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-gray-800">
                 Questions ({fields.length})

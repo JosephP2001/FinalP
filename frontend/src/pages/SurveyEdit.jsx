@@ -9,6 +9,7 @@ import { surveySchema } from '../schemas/surveySchemas';
 import FormInput from '../components/common/FormInput';
 import FormTextarea from '../components/common/FormTextarea';
 import FormSelect from '../components/common/FormSelect';
+import { FormSkeleton, QuestionBuilderSkeleton } from '../components/common/Skeleton';
 
 const SurveyEdit = () => {
   const { id } = useParams();
@@ -44,13 +45,12 @@ const SurveyEdit = () => {
   });
 
   const questionTypes = [
-    { value: 'text', label: ' Texto Libre' },
-    { value: 'multiple', label: ' Opción Múltiple' },
-    { value: 'scale', label: ' Escala (1-10)' },
-    { value: 'date', label: ' Fecha' }
+    { value: 'text', label: '📝 Texto Libre' },
+    { value: 'multiple', label: '☑️ Opción Múltiple' },
+    { value: 'scale', label: '📊 Escala (1-10)' },
+    { value: 'date', label: '📅 Fecha' }
   ];
 
-  // Load existing survey data
   useEffect(() => {
     loadSurvey();
   }, [id]);
@@ -61,14 +61,12 @@ const SurveyEdit = () => {
       const data = await surveyService.getSurvey(id);
       const survey = data.data;
 
-      // Check if user can edit (only drafts)
       if (survey.status !== 'draft') {
         setApiError('Solo puedes editar encuestas en borrador');
         setTimeout(() => navigate('/surveys'), 2000);
         return;
       }
 
-      // Format data for form
       const formData = {
         title: survey.title || '',
         description: survey.description || '',
@@ -107,13 +105,11 @@ const SurveyEdit = () => {
     try {
       setApiError('');
 
-      // Validate at least one question
       if (data.questions.length === 0) {
         setApiError('Debes agregar al menos una pregunta');
         return;
       }
 
-      // Validate multiple choice questions
       const invalidMultiple = data.questions.filter(
         q => q.type === 'multiple' && (!q.options || q.options.length < 2)
       );
@@ -123,7 +119,6 @@ const SurveyEdit = () => {
         return;
       }
 
-      // Prepare data
       const surveyData = {
         ...data,
         status: publishNow ? 'active' : 'draft',
@@ -150,10 +145,30 @@ const SurveyEdit = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-center">
-            <div className="text-6xl mb-4 animate-spin">⚙️</div>
-            <p className="text-gray-600">Cargando encuesta...</p>
+        <div className="container mx-auto px-6 py-8 max-w-4xl">
+          {/* Header Skeleton */}
+          <div className="mb-8 animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-64 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-96"></div>
+          </div>
+
+          {/* General Information Skeleton */}
+          <FormSkeleton />
+
+          {/* Questions Skeleton */}
+          <div className="card mt-6 space-y-4">
+            <div className="flex justify-between items-center mb-4">
+              <div className="h-6 bg-gray-200 rounded w-32 animate-pulse"></div>
+              <div className="h-10 bg-gray-200 rounded w-36 animate-pulse"></div>
+            </div>
+            <QuestionBuilderSkeleton count={3} />
+          </div>
+
+          {/* Action Buttons Skeleton */}
+          <div className="flex gap-4 mt-6 animate-pulse">
+            <div className="h-10 bg-gray-200 rounded flex-1"></div>
+            <div className="h-10 bg-gray-200 rounded flex-1"></div>
+            <div className="h-10 bg-gray-200 rounded flex-1"></div>
           </div>
         </div>
       </div>
@@ -178,7 +193,7 @@ const SurveyEdit = () => {
 
         <form>
           {/* General Information */}
-          <div className="card p-6 mb-6">
+          <div className="card mb-6">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Información General</h2>
 
             <div className="space-y-4">
@@ -238,7 +253,7 @@ const SurveyEdit = () => {
           </div>
 
           {/* Questions */}
-          <div className="card p-6 mb-6">
+          <div className="card mb-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-gray-800">
                 Preguntas ({fields.length})
@@ -311,7 +326,7 @@ const SurveyEdit = () => {
   );
 };
 
-// Question Item Component (reused from SurveyBuilder)
+// Question Item Component
 const QuestionItem = ({ qIndex, control, register, remove, watch, errors, questionTypes }) => {
   const questionType = watch(`questions.${qIndex}.type`);
 

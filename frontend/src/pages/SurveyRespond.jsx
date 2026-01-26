@@ -7,6 +7,7 @@ import { surveyService } from '../services/surveyService';
 import { responseService } from '../services/responseService';
 import { responseSchema } from '../schemas/responseSchemas';
 import FormInput from '../components/common/FormInput';
+import { Skeleton } from '../components/common/Skeleton';
 
 const SurveyRespond = () => {
   const { id } = useParams();
@@ -69,14 +70,12 @@ const SurveyRespond = () => {
       
       setError('');
 
-      // Validate email is present
       if (!data.respondentEmail || data.respondentEmail.trim() === '') {
         console.log('❌ [RESPONSE] Email is missing!');
         setError('El email es obligatorio');
         return;
       }
 
-      // Validate required questions
       const requiredQuestions = survey.questions.filter(q => q.required);
       const missingAnswers = requiredQuestions.filter(q => !data.answers[q._id] || data.answers[q._id] === '');
 
@@ -86,7 +85,6 @@ const SurveyRespond = () => {
         return;
       }
 
-      // Format answers - Convert object to array
       const formattedAnswers = Object.entries(data.answers)
         .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
         .map(([questionId, value]) => ({
@@ -96,7 +94,6 @@ const SurveyRespond = () => {
 
       console.log('📝 [RESPONSE] Formatted answers:', formattedAnswers);
 
-      // Prepare payload
       const payload = {
         answers: formattedAnswers,
         respondentEmail: data.respondentEmail.trim()
@@ -104,7 +101,6 @@ const SurveyRespond = () => {
 
       console.log('🚀 [RESPONSE] Sending to API:', JSON.stringify(payload, null, 2));
 
-      // Send response
       await responseService.submitResponse(id, payload);
 
       console.log('✅ [RESPONSE] Success!');
@@ -229,11 +225,50 @@ const SurveyRespond = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center">
-        <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-md w-full text-center">
-          <div className="text-6xl mb-4 animate-spin">⚙️</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Cargando encuesta...</h2>
-          <p className="text-gray-600">Por favor espera</p>
+      <div className="min-h-screen bg-gradient-to-br from-primary-500 to-secondary-500 py-12 px-4">
+        <div className="container mx-auto max-w-3xl">
+          {/* Header Skeleton */}
+          <div className="bg-white rounded-t-2xl shadow-2xl p-8 border-b-4 border-primary-500">
+            <div className="text-center space-y-4 animate-pulse">
+              <div className="text-6xl mb-4">⚙️</div>
+              <Skeleton className="h-8 w-3/4 mx-auto" />
+              <Skeleton className="h-4 w-2/3 mx-auto" />
+            </div>
+
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="flex justify-center gap-6 animate-pulse">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+            </div>
+          </div>
+
+          {/* Form Skeleton */}
+          <div className="bg-white rounded-b-2xl shadow-2xl p-8 space-y-8">
+            {/* Email Skeleton */}
+            <div className="p-6 bg-blue-50 border border-blue-200 rounded-lg space-y-3 animate-pulse">
+              <div className="flex items-center gap-2 mb-4">
+                <Skeleton className="h-5 w-5 rounded" />
+                <Skeleton className="h-5 w-40" />
+              </div>
+              <Skeleton className="h-10 w-full rounded-lg" />
+              <Skeleton className="h-3 w-3/4" />
+            </div>
+
+            {/* Questions Skeleton */}
+            <div className="space-y-8">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="pb-6 border-b border-gray-200 space-y-4 animate-pulse">
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-32 w-full rounded-lg" />
+                </div>
+              ))}
+            </div>
+
+            {/* Submit Button Skeleton */}
+            <Skeleton className="h-14 w-full rounded-lg" />
+          </div>
         </div>
       </div>
     );
