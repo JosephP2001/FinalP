@@ -1,22 +1,22 @@
 // backend/src/services/aiService.js
 
-import Groq from 'groq-sdk';
+import Groq from "groq-sdk";
 
 const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY
+  apiKey: process.env.GROQ_API_KEY,
 });
 
 /**
  * Get AI Analysis for survey responses
  * Uses Groq API (llama3-70b-8192) for intelligent analysis
- * 
+ *
  * @param {Object} survey - Survey document
  * @param {Array} responses - Array of response documents
  * @returns {Promise<Object>} Analysis results
  */
 export const getAIAnalysis = async (survey, responses) => {
   try {
-    console.log('🤖 Starting AI analysis...');
+    console.log("🤖 Starting AI analysis...");
     console.log(`📊 Survey: ${survey.title}`);
     console.log(`📝 Responses: ${responses.length}`);
 
@@ -30,44 +30,47 @@ export const getAIAnalysis = async (survey, responses) => {
     const completion = await groq.chat.completions.create({
       messages: [
         {
-          role: 'system',
-          content: 'Eres un analista experto en encuestas y feedback. Tu trabajo es analizar respuestas de encuestas y proporcionar insights valiosos, claros y accionables en español.'
+          role: "system",
+          content:
+            "Eres un analista experto en encuestas y feedback. Tu trabajo es analizar respuestas de encuestas y proporcionar insights valiosos, claros y accionables en español.",
         },
         {
-          role: 'user',
-          content: prompt
-        }
+          role: "user",
+          content: prompt,
+        },
       ],
-      model: 'llama-3.3-70b-versatile', // Updated to current model
+      model: "llama-3.3-70b-versatile", // Updated to current model
       temperature: 0.7,
       max_tokens: 2000,
       top_p: 1,
-      stream: false
+      stream: false,
     });
 
     const aiResponse = completion.choices[0]?.message?.content;
 
     if (!aiResponse) {
-      throw new Error('No response from AI');
+      throw new Error("No response from AI");
     }
 
     // Parse AI response
     const analysis = parseAIResponse(aiResponse);
 
-    console.log('✅ AI analysis completed successfully');
+    console.log("✅ AI analysis completed successfully");
 
     return {
       success: true,
-      analysis,
+      analysis: {
+        ...analysis,
+        generatedAt: new Date(),
+      },
       metadata: {
-        model: 'llama-3.3-70b-versatile',
+        model: "llama-3.3-70b-versatile",
         responsesAnalyzed: responses.length,
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     };
-
   } catch (error) {
-    console.error('❌ AI analysis error:', error);
+    console.error("❌ AI analysis error:", error);
     throw new Error(`Error generating AI analysis: ${error.message}`);
   }
 };
@@ -80,19 +83,19 @@ const prepareSurveyData = (survey, responses) => {
     title: survey.title,
     description: survey.description,
     totalResponses: responses.length,
-    questions: survey.questions.map(q => ({
+    questions: survey.questions.map((q) => ({
       id: q._id,
       text: q.text,
       type: q.type,
-      responses: []
-    }))
+      responses: [],
+    })),
   };
 
   // Organize responses by question
-  responses.forEach(response => {
-    response.answers.forEach(answer => {
+  responses.forEach((response) => {
+    response.answers.forEach((answer) => {
       const questionIndex = data.questions.findIndex(
-        q => q.id.toString() === answer.questionId.toString()
+        (q) => q.id.toString() === answer.questionId.toString(),
       );
 
       if (questionIndex !== -1) {
@@ -117,7 +120,7 @@ const createAnalysisPrompt = (surveyData) => {
   surveyData.questions.forEach((question, index) => {
     prompt += `${index + 1}. **${question.text}** (${question.type})\n`;
     prompt += `   Respuestas (${question.responses.length}):\n`;
-    
+
     if (question.responses.length > 0) {
       question.responses.forEach((response, idx) => {
         prompt += `   - ${response}\n`;
@@ -151,20 +154,25 @@ const parseAIResponse = (aiResponse) => {
   try {
     // Try to extract JSON from response
     const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-    
+
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
-      
+
       // Validate structure
       return {
-        summary: parsed.summary || 'No summary available',
-        keyInsights: Array.isArray(parsed.keyInsights) ? parsed.keyInsights : [],
+        summary: parsed.summary || "No summary available",
+        keyInsights: Array.isArray(parsed.keyInsights)
+          ? parsed.keyInsights
+          : [],
         sentiment: {
-          overall: parsed.sentiment?.overall || 'neutral',
+          overall: parsed.sentiment?.overall || "neutral",
           score: parsed.sentiment?.score || 50,
-          explanation: parsed.sentiment?.explanation || 'No explanation available'
+          explanation:
+            parsed.sentiment?.explanation || "No explanation available",
         },
-        recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : []
+        recommendations: Array.isArray(parsed.recommendations)
+          ? parsed.recommendations
+          : [],
       };
     }
 
@@ -173,26 +181,25 @@ const parseAIResponse = (aiResponse) => {
       summary: aiResponse,
       keyInsights: [],
       sentiment: {
-        overall: 'neutral',
+        overall: "neutral",
         score: 50,
-        explanation: 'Unable to determine sentiment'
+        explanation: "Unable to determine sentiment",
       },
-      recommendations: []
+      recommendations: [],
     };
-
   } catch (error) {
-    console.error('Error parsing AI response:', error);
-    
+    console.error("Error parsing AI response:", error);
+
     // Return raw response as fallback
     return {
       summary: aiResponse,
       keyInsights: [],
       sentiment: {
-        overall: 'neutral',
+        overall: "neutral",
         score: 50,
-        explanation: 'Parse error'
+        explanation: "Parse error",
       },
-      recommendations: []
+      recommendations: [],
     };
   }
 };
