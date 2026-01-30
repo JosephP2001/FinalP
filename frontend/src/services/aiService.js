@@ -17,14 +17,31 @@ const getAuthHeader = () => {
 };
 
 /**
- * AI Service
+ * AI Service with Rate Limit Support
  * Handles AI-powered analysis using Groq API through backend
  */
 export const aiService = {
   /**
+   * Get current rate limit status
+   * @returns {Promise} Rate limit status
+   */
+  getRateLimitStatus: async () => {
+    try {
+      const response = await axios.get(
+        `${API_URL}/ai/rate-limit-status`,
+        getAuthHeader()
+      );
+      return response.data;
+    } catch (error) {
+      console.error('[AI] Rate limit status error:', error);
+      return null;
+    }
+  },
+
+  /**
    * Analyze full survey with AI
    * @param {string} surveyId - Survey ID
-   * @returns {Promise} AI analysis result
+   * @returns {Promise} AI analysis result with rate limit info
    */
   analyzeSurvey: async (surveyId) => {
     try {
@@ -37,9 +54,26 @@ export const aiService = {
       );
 
       console.log('[AI] Analysis complete');
+      console.log('[AI] Rate limit info:', response.data.rateLimitInfo);
+      
       return response.data;
     } catch (error) {
       console.error('[AI] Analysis error:', error);
+      
+      // Handle rate limit errors specially
+      if (error.response?.status === 429) {
+        const rateLimitError = error.response.data;
+        
+        // Create user-friendly error message
+        throw {
+          isRateLimitError: true,
+          type: rateLimitError.error,
+          message: rateLimitError.message,
+          retryAfter: rateLimitError.retryAfter,
+          limit: rateLimitError.limit
+        };
+      }
+      
       throw error;
     }
   }

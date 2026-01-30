@@ -1,218 +1,200 @@
+// backend/src/services/aiService.js
+
+import Groq from 'groq-sdk';
+
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY
+});
 
 /**
- * ------ANALYZE SURVEY's RESPONSE USING Groq AI------
- * @param {Object} survey - survey :v, there's no too much cience
- * @param {Array} responses - Responses Array
- * @returns {Object} Complete analysis with insights 
+ * Get AI Analysis for survey responses
+ * Uses Groq API (llama3-70b-8192) for intelligent analysis
+ * 
+ * @param {Object} survey - Survey document
+ * @param {Array} responses - Array of response documents
+ * @returns {Promise<Object>} Analysis results
  */
-
 export const getAIAnalysis = async (survey, responses) => {
   try {
-    const analysisData = prepareAnalysisData(survey, responses);
-    const prompt = createAnalysisPrompt(analysisData);
-    
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          {
-            role: 'system',
-            content: 'Eres un analista experto de encuestas. Proporciona análisis claros y útiles en español.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000
-      })
+    console.log('🤖 Starting AI analysis...');
+    console.log(`📊 Survey: ${survey.title}`);
+    console.log(`📝 Responses: ${responses.length}`);
+
+    // Prepare data for AI analysis
+    const surveyData = prepareSurveyData(survey, responses);
+
+    // Create prompt for Groq
+    const prompt = createAnalysisPrompt(surveyData);
+
+    // Call Groq API
+    const completion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: 'system',
+          content: 'Eres un analista experto en encuestas y feedback. Tu trabajo es analizar respuestas de encuestas y proporcionar insights valiosos, claros y accionables en español.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      model: 'llama-3.3-70b-versatile', // Updated to current model
+      temperature: 0.7,
+      max_tokens: 2000,
+      top_p: 1,
+      stream: false
     });
 
-    if (!response.ok) {
-      throw new Error(`Groq API error: ${response.statusText}`);
+    const aiResponse = completion.choices[0]?.message?.content;
+
+    if (!aiResponse) {
+      throw new Error('No response from AI');
     }
 
-    const data = await response.json();
-    const aiResponse = data.choices[0].message.content;
+    // Parse AI response
     const analysis = parseAIResponse(aiResponse);
+
+    console.log('✅ AI analysis completed successfully');
 
     return {
       success: true,
-      analysis: {
-        summary: analysis.summary,
-        keyInsights: analysis.keyInsights,
-        sentiment: analysis.sentiment,
-        recommendations: analysis.recommendations,
-        statistics: calculateStatistics(responses),
-        generatedAt: new Date()
+      analysis,
+      metadata: {
+        model: 'llama-3.3-70b-versatile',
+        responsesAnalyzed: responses.length,
+        timestamp: new Date().toISOString()
       }
     };
+
   } catch (error) {
-    console.error('AI Analysis Error:', error);
-    return generateQuickSummary(survey, responses);
+    console.error('❌ AI analysis error:', error);
+    throw new Error(`Error generating AI analysis: ${error.message}`);
   }
 };
 
-const prepareAnalysisData = (survey, responses) => {
-  const questionAnalysis = survey.questions.map(question => {
-    const questionResponses = responses.map(response => {
-      const answer = response.answers.find(a => a.questionId.toString() === question._id.toString());
-      return answer ? answer.value : null;
-    }).filter(v => v !== null);
+/**
+ * Prepare survey data for AI analysis
+ */
+const prepareSurveyData = (survey, responses) => {
+  const data = {
+    title: survey.title,
+    description: survey.description,
+    totalResponses: responses.length,
+    questions: survey.questions.map(q => ({
+      id: q._id,
+      text: q.text,
+      type: q.type,
+      responses: []
+    }))
+  };
 
-    return {
-      questionId: question._id,
-      questionText: question.text,
-      questionType: question.type,
-      totalResponses: questionResponses.length,
-      responses: questionResponses
-    };
+  // Organize responses by question
+  responses.forEach(response => {
+    response.answers.forEach(answer => {
+      const questionIndex = data.questions.findIndex(
+        q => q.id.toString() === answer.questionId.toString()
+      );
+
+      if (questionIndex !== -1) {
+        data.questions[questionIndex].responses.push(answer.answer);
+      }
+    });
   });
 
-  return {
-    surveyTitle: survey.title,
-    surveyDescription: survey.description,
-    totalResponses: responses.length,
-    questions: questionAnalysis
-  };
+  return data;
 };
 
-const createAnalysisPrompt = (data) => {
-  return `Analiza los siguientes datos de una encuesta y proporciona insights valiosos.
+/**
+ * Create analysis prompt for AI
+ */
+const createAnalysisPrompt = (surveyData) => {
+  let prompt = `Analiza la siguiente encuesta y sus respuestas:\n\n`;
+  prompt += `**Encuesta:** ${surveyData.title}\n`;
+  prompt += `**Descripción:** ${surveyData.description}\n`;
+  prompt += `**Total de respuestas:** ${surveyData.totalResponses}\n\n`;
+  prompt += `**Preguntas y Respuestas:**\n\n`;
 
-ENCUESTA: "${data.surveyTitle}"
-DESCRIPCIÓN: "${data.surveyDescription}"
-TOTAL DE RESPUESTAS: ${data.totalResponses}
-
-PREGUNTAS Y RESPUESTAS:
-${data.questions.map((q, i) => `
-${i + 1}. ${q.questionText} (Tipo: ${q.questionType})
-   Respuestas recibidas: ${q.totalResponses}
-   ${formatResponses(q.responses, q.questionType)}
-`).join('\n')}
-
-Por favor, proporciona tu análisis en el siguiente formato JSON (SOLO JSON, sin texto adicional):
-
-{
-  "summary": "Resumen general de los resultados en 2-3 oraciones",
-  "keyInsights": [
-    "Insight 1: descripción detallada",
-    "Insight 2: descripción detallada",
-    "Insight 3: descripción detallada"
-  ],
-  "sentiment": {
-    "overall": "positive",
-    "score": 75,
-    "explanation": "Explicación del sentimiento detectado"
-  },
-  "recommendations": [
-    "Recomendación 1 basada en los datos",
-    "Recomendación 2 basada en los datos",
-    "Recomendación 3 basada en los datos"
-  ]
-}`;
-};
-
-const formatResponses = (responses, type) => {
-  if (type === 'multiple') {
-    const frequency = {};
-    responses.forEach(r => {
-      frequency[r] = (frequency[r] || 0) + 1;
-    });
-    return Object.entries(frequency)
-      .map(([option, count]) => `   - "${option}": ${count} veces`)
-      .join('\n');
-  } else if (type === 'scale') {
-    const avg = responses.reduce((a, b) => a + Number(b), 0) / responses.length;
-    return `   Promedio: ${avg.toFixed(2)} | Valores: [${responses.join(', ')}]`;
-  } else if (type === 'text') {
-    return responses.slice(0, 10).map((r, i) => `   ${i + 1}. "${r}"`).join('\n');
-  }
-  return '   ' + responses.join(', ');
-};
-
-const parseAIResponse = (response) => {
-  try {
-    let cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      cleaned = jsonMatch[0];
+  surveyData.questions.forEach((question, index) => {
+    prompt += `${index + 1}. **${question.text}** (${question.type})\n`;
+    prompt += `   Respuestas (${question.responses.length}):\n`;
+    
+    if (question.responses.length > 0) {
+      question.responses.forEach((response, idx) => {
+        prompt += `   - ${response}\n`;
+      });
+    } else {
+      prompt += `   - (Sin respuestas)\n`;
     }
-    return JSON.parse(cleaned);
+    prompt += `\n`;
+  });
+
+  prompt += `\nProporciona un análisis completo en el siguiente formato JSON:\n\n`;
+  prompt += `{\n`;
+  prompt += `  "summary": "Un resumen ejecutivo del análisis (2-3 párrafos)",\n`;
+  prompt += `  "keyInsights": ["insight 1", "insight 2", "insight 3"],\n`;
+  prompt += `  "sentiment": {\n`;
+  prompt += `    "overall": "positivo/neutral/negativo",\n`;
+  prompt += `    "score": 0-100,\n`;
+  prompt += `    "explanation": "explicación del sentimiento"\n`;
+  prompt += `  },\n`;
+  prompt += `  "recommendations": ["recomendación 1", "recomendación 2", "recomendación 3"]\n`;
+  prompt += `}\n\n`;
+  prompt += `Responde SOLO con el JSON, sin texto adicional.`;
+
+  return prompt;
+};
+
+/**
+ * Parse AI response into structured format
+ */
+const parseAIResponse = (aiResponse) => {
+  try {
+    // Try to extract JSON from response
+    const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+    
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      
+      // Validate structure
+      return {
+        summary: parsed.summary || 'No summary available',
+        keyInsights: Array.isArray(parsed.keyInsights) ? parsed.keyInsights : [],
+        sentiment: {
+          overall: parsed.sentiment?.overall || 'neutral',
+          score: parsed.sentiment?.score || 50,
+          explanation: parsed.sentiment?.explanation || 'No explanation available'
+        },
+        recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : []
+      };
+    }
+
+    // Fallback: return raw response as summary
+    return {
+      summary: aiResponse,
+      keyInsights: [],
+      sentiment: {
+        overall: 'neutral',
+        score: 50,
+        explanation: 'Unable to determine sentiment'
+      },
+      recommendations: []
+    };
+
   } catch (error) {
     console.error('Error parsing AI response:', error);
+    
+    // Return raw response as fallback
     return {
-      summary: "Análisis generado automáticamente de las respuestas.",
-      keyInsights: [
-        "Se han recopilado múltiples respuestas",
-        "Los datos están disponibles para revisión",
-        "Se recomienda análisis manual detallado"
-      ],
+      summary: aiResponse,
+      keyInsights: [],
       sentiment: {
-        overall: "neutral",
+        overall: 'neutral',
         score: 50,
-        explanation: "No se pudo analizar el sentimiento automáticamente"
+        explanation: 'Parse error'
       },
-      recommendations: [
-        "Revisar las respuestas manualmente",
-        "Identificar patrones comunes",
-        "Tomar acciones basadas en feedback"
-      ]
+      recommendations: []
     };
   }
 };
 
-const calculateStatistics = (responses) => {
-  const responsesByDay = {};
-
-  responses.forEach(response => {
-    const date = new Date(response.createdAt).toLocaleDateString();
-    responsesByDay[date] = (responsesByDay[date] || 0) + 1;
-  });
-
-  return {
-    totalResponses: responses.length,
-    averagePerDay: Object.values(responsesByDay).reduce((a, b) => a + b, 0) / Object.keys(responsesByDay).length || 0,
-    responsesByDay,
-    latestResponse: responses[0]?.createdAt || null,
-    oldestResponse: responses[responses.length - 1]?.createdAt || null
-  };
-};
-
-export const generateQuickSummary = (survey, responses) => {
-  const totalQuestions = survey.questions.length;
-  const multipleChoiceQuestions = survey.questions.filter(q => q.type === 'multiple').length;
-  const textQuestions = survey.questions.filter(q => q.type === 'text').length;
-
-  return {
-    success: true,
-    analysis: {
-      summary: `Se han recopilado ${responses.length} respuestas para la encuesta "${survey.title}". La encuesta contiene ${totalQuestions} preguntas en total.`,
-      keyInsights: [
-        `Total de participantes: ${responses.length}`,
-        `Preguntas de opción múltiple: ${multipleChoiceQuestions}`,
-        `Preguntas de texto libre: ${textQuestions}`,
-        `Tasa de participación actual: ${((responses.length / (survey.settings.maxResponses || 100)) * 100).toFixed(1)}%`
-      ],
-      sentiment: {
-        overall: "neutral",
-        score: 50,
-        explanation: "Análisis básico sin procesamiento de IA. Configure GROQ_API_KEY para análisis avanzado."
-      },
-      recommendations: [
-        "Revisar respuestas individuales para obtener insights detallados",
-        "Considerar patrones en las respuestas de opción múltiple",
-        "Analizar comentarios de texto libre manualmente",
-        "Configurar API de Groq para análisis automático con IA"
-      ],
-      statistics: calculateStatistics(responses),
-      generatedAt: new Date()
-    }
-  };
-};
+export default { getAIAnalysis };
