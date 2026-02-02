@@ -45,7 +45,7 @@ const SurveyBuilder = () => {
   useEffect(() => {
     if (Object.keys(errors).length > 0) {
       console.log('⚠️ Validation Errors:', errors);
-      console.log('⚠️ Errors stringified:', JSON.stringify(errors, null, 2));
+      //console.log('⚠️ Errors stringified:', JSON.stringify(errors, null, 2));
     }
   }, [errors]);
 

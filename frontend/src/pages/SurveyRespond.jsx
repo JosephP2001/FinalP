@@ -1,20 +1,20 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { CheckCircle, AlertCircle, Mail } from 'lucide-react';
-import { surveyService } from '../services/surveyService';
-import { responseService } from '../services/responseService';
-import { responseSchema } from '../schemas/responseSchemas';
-import FormInput from '../components/common/FormInput';
-import { Skeleton } from '../components/common/Skeleton';
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { CheckCircle, AlertCircle, Mail } from "lucide-react";
+import { surveyService } from "../services/surveyService";
+import { responseService } from "../services/responseService";
+import { responseSchema } from "../schemas/responseSchemas";
+import FormInput from "../components/common/FormInput";
+import { Skeleton } from "../components/common/Skeleton";
 
 const SurveyRespond = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [survey, setSurvey] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
   const {
@@ -22,13 +22,13 @@ const SurveyRespond = () => {
     handleSubmit,
     control,
     setValue,
-    formState: { errors, isSubmitting }
+    formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(responseSchema),
     defaultValues: {
-      respondentEmail: '',
-      answers: {}
-    }
+      respondentEmail: "",
+      answers: {},
+    },
   });
 
   useEffect(() => {
@@ -39,25 +39,52 @@ const SurveyRespond = () => {
     try {
       setLoading(true);
       const data = await surveyService.getSurvey(id);
-      setSurvey(data.data);
 
-      if (data.data.status !== 'active') {
-        setError('Esta encuesta no está disponible actualmente');
+      // Validaciones que deben bloquear el acceso
+      if (data.data.status !== "active") {
+        setError("Esta encuesta no está disponible actualmente");
+        setSurvey(null); // ✅ NO cargar la encuesta
+        setLoading(false);
+        return; // ✅ DETENER aquí
       }
 
       const now = new Date();
-      if (data.data.settings?.startDate && new Date(data.data.settings.startDate) > now) {
-        setError('Esta encuesta aún no ha comenzado');
-      }
-      if (data.data.settings?.endDate && new Date(data.data.settings.endDate) < now) {
-        setError('Esta encuesta ha finalizado');
+      if (
+        data.data.settings?.startDate &&
+        new Date(data.data.settings.startDate) > now
+      ) {
+        setError("Esta encuesta aún no ha comenzado");
+        setSurvey(null);
+        setLoading(false);
+        return;
       }
 
-      if (data.data.settings?.maxResponses && data.data.responseCount >= data.data.settings.maxResponses) {
-        setError('Esta encuesta ha alcanzado el límite de respuestas');
+      if (
+        data.data.settings?.endDate &&
+        new Date(data.data.settings.endDate) < now
+      ) {
+        setError("Esta encuesta ha finalizado");
+        setSurvey(null);
+        setLoading(false);
+        return;
       }
+
+      if (
+        data.data.settings?.maxResponses &&
+        data.data.responseCount >= data.data.settings.maxResponses
+      ) {
+        setError("Esta encuesta ha alcanzado el límite de respuestas");
+        setSurvey(null);
+        setLoading(false);
+        return;
+      }
+
+      
+      setSurvey(data.data);
+      setError(""); // Clean any previous error
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al cargar la encuesta');
+      setError(err.response?.data?.message || "Error al cargar la encuesta");
+      setSurvey(null);
     } finally {
       setLoading(false);
     }
@@ -65,55 +92,64 @@ const SurveyRespond = () => {
 
   const onSubmit = async (data) => {
     try {
-      console.log('🟢 [RESPONSE] Starting submission...');
-      console.log('📦 [RESPONSE] Raw form data:', data);
-      
-      setError('');
+      console.log(" [RESPONSE] Starting submission...");
+      console.log(" [RESPONSE] Raw form data:", data);
 
-      if (!data.respondentEmail || data.respondentEmail.trim() === '') {
-        console.log('❌ [RESPONSE] Email is missing!');
-        setError('El email es obligatorio');
+      setError("");
+
+      if (!data.respondentEmail || data.respondentEmail.trim() === "") {
+        console.log(" [RESPONSE] Email is missing!");
+        setError("El email es obligatorio");
         return;
       }
 
-      const requiredQuestions = survey.questions.filter(q => q.required);
-      const missingAnswers = requiredQuestions.filter(q => !data.answers[q._id] || data.answers[q._id] === '');
+      const requiredQuestions = survey.questions.filter((q) => q.required);
+      const missingAnswers = requiredQuestions.filter(
+        (q) => !data.answers[q._id] || data.answers[q._id] === "",
+      );
 
       if (missingAnswers.length > 0) {
-        console.log('❌ [RESPONSE] Missing answers:', missingAnswers);
-        setError(`Por favor responde todas las preguntas obligatorias (${missingAnswers.length} faltantes)`);
+        console.log(" [RESPONSE] Missing answers:", missingAnswers);
+        setError(
+          `Por favor responde todas las preguntas obligatorias (${missingAnswers.length} faltantes)`,
+        );
         return;
       }
 
       const formattedAnswers = Object.entries(data.answers)
-        .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
+        .filter(
+          ([_, value]) => value !== "" && value !== null && value !== undefined,
+        )
         .map(([questionId, value]) => ({
           questionId,
-          value
+          value,
         }));
 
-      console.log('📝 [RESPONSE] Formatted answers:', formattedAnswers);
+      console.log("📝 [RESPONSE] Formatted answers:", formattedAnswers);
 
       const payload = {
         answers: formattedAnswers,
-        respondentEmail: data.respondentEmail.trim()
+        respondentEmail: data.respondentEmail.trim(),
       };
 
-      console.log('🚀 [RESPONSE] Sending to API:', JSON.stringify(payload, null, 2));
+      console.log(
+        "🚀 [RESPONSE] Sending to API:",
+        JSON.stringify(payload, null, 2),
+      );
 
       await responseService.submitResponse(id, payload);
 
-      console.log('✅ [RESPONSE] Success!');
+      console.log(" [RESPONSE] Success!");
 
       setSuccess(true);
 
       setTimeout(() => {
-        navigate('/');
+        navigate("/");
       }, 3000);
     } catch (err) {
-      console.error('❌ [RESPONSE] Error:', err);
-      console.error('❌ [RESPONSE] Error response:', err.response?.data);
-      setError(err.response?.data?.message || 'Error al enviar respuesta');
+      console.error(" [RESPONSE] Error:", err);
+      console.error(" [RESPONSE] Error response:", err.response?.data);
+      setError(err.response?.data?.message || "Error al enviar respuesta");
     }
   };
 
@@ -121,7 +157,7 @@ const SurveyRespond = () => {
     const questionId = question._id;
 
     switch (question.type) {
-      case 'text':
+      case "text":
         return (
           <Controller
             name={`answers.${questionId}`}
@@ -138,7 +174,7 @@ const SurveyRespond = () => {
           />
         );
 
-      case 'multiple':
+      case "multiple":
         return (
           <Controller
             name={`answers.${questionId}`}
@@ -166,7 +202,7 @@ const SurveyRespond = () => {
           />
         );
 
-      case 'scale':
+      case "scale":
         return (
           <Controller
             name={`answers.${questionId}`}
@@ -186,8 +222,8 @@ const SurveyRespond = () => {
                       onClick={() => field.onChange(num)}
                       className={`w-12 h-12 rounded-lg font-semibold transition-all ${
                         field.value === num
-                          ? 'bg-primary-500 text-white scale-110 shadow-lg'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? "bg-primary-500 text-white scale-110 shadow-lg"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                       }`}
                     >
                       {num}
@@ -195,25 +231,23 @@ const SurveyRespond = () => {
                   ))}
                 </div>
                 <div className="text-center text-sm text-gray-600 mt-2">
-                  {field.value ? `Seleccionado: ${field.value}` : 'Selecciona una puntuación'}
+                  {field.value
+                    ? `Seleccionado: ${field.value}`
+                    : "Selecciona una puntuación"}
                 </div>
               </div>
             )}
           />
         );
 
-      case 'date':
+      case "date":
         return (
           <Controller
             name={`answers.${questionId}`}
             control={control}
             defaultValue=""
             render={({ field }) => (
-              <input
-                {...field}
-                type="date"
-                className="input-field"
-              />
+              <input {...field} type="date" className="input-field" />
             )}
           />
         );
@@ -259,7 +293,10 @@ const SurveyRespond = () => {
             {/* Questions Skeleton */}
             <div className="space-y-8">
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="pb-6 border-b border-gray-200 space-y-4 animate-pulse">
+                <div
+                  key={i}
+                  className="pb-6 border-b border-gray-200 space-y-4 animate-pulse"
+                >
                   <Skeleton className="h-6 w-3/4" />
                   <Skeleton className="h-32 w-full rounded-lg" />
                 </div>
@@ -279,9 +316,15 @@ const SurveyRespond = () => {
       <div className="min-h-screen bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-md w-full text-center">
           <CheckCircle className="mx-auto text-green-500 mb-4" size={80} />
-          <h2 className="text-3xl font-bold text-gray-800 mb-4">¡Gracias por tu respuesta!</h2>
-          <p className="text-gray-600 mb-6">Tu participación ha sido registrada exitosamente.</p>
-          <div className="text-sm text-gray-500">Redirigiendo en 3 segundos...</div>
+          <h2 className="text-3xl font-bold text-gray-800 mb-4">
+            ¡Gracias por tu respuesta!
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Tu participación ha sido registrada exitosamente.
+          </p>
+          <div className="text-sm text-gray-500">
+            Redirigiendo en 3 segundos...
+          </div>
         </div>
       </div>
     );
@@ -292,9 +335,11 @@ const SurveyRespond = () => {
       <div className="min-h-screen bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-md w-full text-center">
           <AlertCircle className="mx-auto text-red-500 mb-4" size={80} />
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Encuesta no disponible</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">
+            Encuesta no disponible
+          </h2>
           <p className="text-gray-600 mb-6">{error}</p>
-          <button onClick={() => navigate('/')} className="btn-primary">
+          <button onClick={() => navigate("/")} className="btn-primary">
             Volver al inicio
           </button>
         </div>
@@ -308,7 +353,9 @@ const SurveyRespond = () => {
         <div className="bg-white rounded-t-2xl shadow-2xl p-8 border-b-4 border-primary-500">
           <div className="text-center">
             <div className="text-6xl mb-4">📊</div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-3">{survey.title}</h1>
+            <h1 className="text-3xl font-bold text-gray-800 mb-3">
+              {survey.title}
+            </h1>
             {survey.description && (
               <p className="text-gray-600 text-lg">{survey.description}</p>
             )}
@@ -319,13 +366,19 @@ const SurveyRespond = () => {
               <span>📝 {survey.questions?.length} preguntas</span>
               <span>👤 Requiere email</span>
               {survey.settings?.maxResponses && (
-                <span>📊 {survey.responseCount || 0} / {survey.settings.maxResponses} respuestas</span>
+                <span>
+                  📊 {survey.responseCount || 0} /{" "}
+                  {survey.settings.maxResponses} respuestas
+                </span>
               )}
             </div>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-b-2xl shadow-2xl p-8">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="bg-white rounded-b-2xl shadow-2xl p-8"
+        >
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
               <AlertCircle size={20} />
@@ -342,23 +395,29 @@ const SurveyRespond = () => {
             <FormInput
               type="email"
               placeholder="tu-email@uce.edu.ec"
-              {...register('respondentEmail')}
+              {...register("respondentEmail")}
               error={errors.respondentEmail?.message}
               disabled={isSubmitting}
             />
             <p className="mt-2 text-xs text-gray-600">
-              ℹ️ Usamos tu email para evitar respuestas duplicadas. Tu información es privada.
+              ℹ️ Usamos tu email para evitar respuestas duplicadas. Tu
+              información es privada.
             </p>
           </div>
 
           <div className="space-y-8">
             {survey.questions?.map((question, index) => (
-              <div key={question._id} className="pb-6 border-b border-gray-200 last:border-b-0">
+              <div
+                key={question._id}
+                className="pb-6 border-b border-gray-200 last:border-b-0"
+              >
                 <label className="block mb-4">
                   <span className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                     <span className="text-primary-600">{index + 1}.</span>
                     {question.text}
-                    {question.required && <span className="text-red-500 text-sm">*</span>}
+                    {question.required && (
+                      <span className="text-red-500 text-sm">*</span>
+                    )}
                   </span>
                 </label>
                 {renderQuestion(question, index)}
@@ -382,7 +441,7 @@ const SurveyRespond = () => {
                   Enviando...
                 </span>
               ) : (
-                '✓ Enviar Respuesta'
+                "✓ Enviar Respuesta"
               )}
             </button>
           </div>
