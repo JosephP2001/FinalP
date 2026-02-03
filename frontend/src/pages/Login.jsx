@@ -6,6 +6,7 @@ import { Mail, Lock, AlertCircle } from 'lucide-react';
 import { authService } from '../services/authService';
 import { loginSchema, registerSchema } from '../schemas/authSchemas';
 import FormInput from '../components/common/FormInput';
+import uceLogo from '../assets/uce-logo.png';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -96,25 +97,38 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-500 via-purple-500 to-secondary-500 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         {/* Logo & Title */}
-        <div className="text-center mb-8">
-          <div className="text-6xl mb-4">📊</div>
+        <div className="text-center mb-8 animate-fade-in">
+          <div className="mb-6 flex justify-center">
+            <div className="bg-white rounded-2xl p-6 shadow-2xl">
+              <img 
+                src={uceLogo} 
+                alt="UCE Logo" 
+                className="h-24 w-auto mx-auto"
+              />
+            </div>
+          </div>
           <h1 className="text-4xl font-bold text-white mb-2">
-            UCE Survey System
+            Sistema de Encuestas
           </h1>
+          <p className="text-primary-100 text-lg">
+            Universidad Central del Ecuador
+          </p>
         </div>
 
         {/* Card -> Login/Register */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">
-            {isRegister ? 'Registrarse' : 'Iniciar Sesión'}
-          </h2>
+        <div className="bg-white rounded-2xl shadow-2xl p-8 animate-slide-in">
+          <div className="flex items-center justify-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-800">
+              {isRegister ? 'Crear Cuenta' : 'Iniciar Sesión'}
+            </h2>
+          </div>
 
           {/* Error Message */}
           {apiError && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700 animate-fade-in">
               <AlertCircle size={20} />
               <span className="text-sm">{apiError}</span>
             </div>
@@ -125,17 +139,17 @@ const Login = () => {
             <>
               <form onSubmit={handleSubmitLogin(onLoginSubmit)} className="space-y-5">
                 <FormInput
-                  label="E-mail"
+                  label="Correo Electrónico"
                   type="email"
                   icon={Mail}
-                  placeholder="xxx@uce.edu.ec"
+                  placeholder="tu-email@uce.edu.ec"
                   {...registerLogin('email')}
                   error={loginErrors.email?.message}
                   disabled={isLoginSubmitting}
                 />
 
                 <FormInput
-                  label="Password"
+                  label="Contraseña"
                   type="password"
                   icon={Lock}
                   placeholder="••••••••"
@@ -146,20 +160,30 @@ const Login = () => {
 
                 <button
                   type="submit"
-                  className="w-full btn-primary py-3 text-lg"
+                  className="w-full btn-primary py-3 text-lg font-semibold"
                   disabled={isLoginSubmitting}
                 >
-                  {isLoginSubmitting ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+                  {isLoginSubmitting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="spinner-small"></div>
+                      Iniciando sesión...
+                    </span>
+                  ) : (
+                    'Iniciar Sesión'
+                  )}
                 </button>
 
                 <div className="text-center">
                   <button
                     type="button"
-                    onClick={() => setIsRegister(true)}
-                    className="text-primary-600 hover:text-primary-700 font-medium"
+                    onClick={() => {
+                      setIsRegister(true);
+                      setApiError('');
+                    }}
+                    className="text-primary-600 hover:text-primary-700 font-medium transition-colors"
                     disabled={isLoginSubmitting}
                   >
-                    ¿Do not have an account? Sign up
+                    ¿No tienes cuenta? Regístrate aquí
                   </button>
                 </div>
               </form>
@@ -171,26 +195,26 @@ const Login = () => {
               {/* Register Form */}
               <form onSubmit={handleSubmitRegister(onRegisterSubmit)} className="space-y-5">
                 <FormInput
-                  label="Name"
+                  label="Nombre Completo"
                   type="text"
-                  placeholder="Name Lastname"
+                  placeholder="Juan Pérez"
                   {...registerForm('name')}
                   error={registerErrors.name?.message}
                   disabled={isRegisterSubmitting}
                 />
 
                 <FormInput
-                  label="E-mail"
+                  label="Correo Electrónico"
                   type="email"
                   icon={Mail}
-                  placeholder="xxx@uce.edu.ec"
+                  placeholder="tu-email@uce.edu.ec"
                   {...registerForm('email')}
                   error={registerErrors.email?.message}
                   disabled={isRegisterSubmitting}
                 />
 
                 <FormInput
-                  label="Password"
+                  label="Contraseña"
                   type="password"
                   icon={Lock}
                   placeholder="Mínimo 6 caracteres"
@@ -201,20 +225,30 @@ const Login = () => {
 
                 <button
                   type="submit"
-                  className="w-full btn-primary py-3 text-lg"
+                  className="w-full btn-primary py-3 text-lg font-semibold"
                   disabled={isRegisterSubmitting}
                 >
-                  {isRegisterSubmitting ? 'Registrando...' : 'Registrarse'}
+                  {isRegisterSubmitting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="spinner-small"></div>
+                      Registrando...
+                    </span>
+                  ) : (
+                    'Crear Cuenta'
+                  )}
                 </button>
 
                 <div className="text-center">
                   <button
                     type="button"
-                    onClick={() => setIsRegister(false)}
-                    className="text-primary-600 hover:text-primary-700 font-medium"
+                    onClick={() => {
+                      setIsRegister(false);
+                      setApiError('');
+                    }}
+                    className="text-primary-600 hover:text-primary-700 font-medium transition-colors"
                     disabled={isRegisterSubmitting}
                   >
-                    ¿Already have an account? Log in
+                    ¿Ya tienes cuenta? Inicia sesión
                   </button>
                 </div>
               </form>
@@ -225,9 +259,14 @@ const Login = () => {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-white/70 mt-6 text-sm">
-          Universidad Central del Ecuador
-        </p>
+        <div className="text-center mt-6 space-y-2">
+          <p className="text-white/90 text-sm font-medium">
+            Universidad Central del Ecuador
+          </p>
+          <p className="text-white/70 text-xs">
+            Sistema de Gestión de Encuestas © 2026
+          </p>
+        </div>
       </div>
     </div>
   );

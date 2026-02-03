@@ -1,8 +1,7 @@
-// frontend/src/components/layout/Navbar.jsx
-
 import { Link } from 'react-router-dom';
 import { Home, FileText, LogOut, User, Shield, Users } from 'lucide-react';
 import { authService } from '../../services/authService';
+import uceLogo from '../../assets/uce-logo.png';
 
 const Navbar = () => {
   const user = authService.getCurrentUser();
@@ -15,15 +14,24 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="bg-white shadow-md">
-      <div className="container mx-auto px-6 py-4">
+    <nav className="bg-gradient-to-r from-primary-600 to-primary-700 shadow-lg">
+      <div className="container mx-auto px-6 py-3">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link to={isAdmin ? "/admin" : "/dashboard"} className="flex items-center space-x-2">
-            <div className="text-3xl">📊</div>
-            <span className="text-xl font-bold text-primary-600">
-              UCE Surveys
-            </span>
+          <Link to={isAdmin ? "/admin" : "/dashboard"} className="flex items-center gap-3 hover:opacity-90 transition-opacity">
+            <img 
+              src={uceLogo} 
+              alt="UCE Logo" 
+              className="h-12 w-auto"
+            />
+            <div className="hidden md:block">
+              <h1 className="text-xl font-bold text-white leading-tight">
+                Sistema de Encuestas
+              </h1>
+              <p className="text-xs text-primary-100">
+                Universidad Central del Ecuador
+              </p>
+            </div>
           </Link>
 
           {/* Navigation Links */}
@@ -33,14 +41,14 @@ const Navbar = () => {
               <>
                 <Link 
                   to="/admin" 
-                  className="flex items-center space-x-2 text-purple-600 hover:text-purple-700 transition-colors font-medium"
+                  className="flex items-center space-x-2 text-white/90 hover:text-white transition-colors font-medium"
                 >
                   <Shield size={20} />
                   <span>All Surveys</span>
                 </Link>
                 <Link 
                   to="/admin/users" 
-                  className="flex items-center space-x-2 text-purple-600 hover:text-purple-700 transition-colors font-medium"
+                  className="flex items-center space-x-2 text-white/90 hover:text-white transition-colors font-medium"
                 >
                   <Users size={20} />
                   <span>Manage Users</span>
@@ -51,14 +59,14 @@ const Navbar = () => {
               <>
                 <Link 
                   to="/dashboard" 
-                  className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors"
+                  className="flex items-center space-x-2 text-white/90 hover:text-white transition-colors font-medium"
                 >
                   <Home size={20} />
                   <span>Dashboard</span>
                 </Link>
                 <Link 
                   to="/surveys" 
-                  className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors"
+                  className="flex items-center space-x-2 text-white/90 hover:text-white transition-colors font-medium"
                 >
                   <FileText size={20} />
                   <span>My Surveys</span>
@@ -69,13 +77,15 @@ const Navbar = () => {
 
           {/* User Menu */}
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2 text-gray-700">
+            <div className="flex items-center space-x-2 text-white">
               <div className="flex items-center gap-2">
-                <User size={20} />
+                <div className="bg-white/20 p-2 rounded-full">
+                  <User size={18} />
+                </div>
                 <div className="hidden md:block">
-                  <span className="font-medium">{user?.name || 'User'}</span>
+                  <span className="font-medium text-sm">{user?.name || 'User'}</span>
                   {isAdmin && (
-                    <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
+                    <span className="ml-2 px-2 py-0.5 bg-secondary-500 text-white text-xs font-semibold rounded-full">
                       Admin
                     </span>
                   )}
@@ -84,12 +94,51 @@ const Navbar = () => {
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center space-x-2 text-red-600 hover:text-red-700 transition-colors"
+              className="flex items-center space-x-2 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-colors"
             >
-              <LogOut size={20} />
-              <span className="hidden md:inline">Exit</span>
+              <LogOut size={18} />
+              <span className="hidden md:inline text-sm font-medium">Exit</span>
             </button>
           </div>
+        </div>
+
+        {/* Mobile Navigation */}
+        <div className="md:hidden mt-3 flex gap-2 border-t border-white/20 pt-3">
+          {isAdmin ? (
+            <>
+              <Link 
+                to="/admin" 
+                className="flex-1 flex items-center justify-center gap-2 text-white/90 hover:text-white bg-white/10 rounded-lg py-2 text-sm"
+              >
+                <Shield size={16} />
+                <span>Surveys</span>
+              </Link>
+              <Link 
+                to="/admin/users" 
+                className="flex-1 flex items-center justify-center gap-2 text-white/90 hover:text-white bg-white/10 rounded-lg py-2 text-sm"
+              >
+                <Users size={16} />
+                <span>Users</span>
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link 
+                to="/dashboard" 
+                className="flex-1 flex items-center justify-center gap-2 text-white/90 hover:text-white bg-white/10 rounded-lg py-2 text-sm"
+              >
+                <Home size={16} />
+                <span>Dashboard</span>
+              </Link>
+              <Link 
+                to="/surveys" 
+                className="flex-1 flex items-center justify-center gap-2 text-white/90 hover:text-white bg-white/10 rounded-lg py-2 text-sm"
+              >
+                <FileText size={16} />
+                <span>Surveys</span>
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </nav>

@@ -4,24 +4,159 @@
 
 @layer base {
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-gray-50 text-gray-900 antialiased;
+  }
+  
+  * {
+    @apply border-gray-200;
   }
 }
 
 @layer components {
+  /* Primary Button - Modern Blue */
   .btn-primary {
-    @apply bg-primary-500 hover:bg-primary-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+    @apply bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 
+           text-white font-semibold py-2.5 px-6 rounded-lg 
+           transition-all duration-200 shadow-md hover:shadow-lg 
+           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
   }
   
+  /* Secondary Button - Neutral Gray */
   .btn-secondary {
-    @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+    @apply bg-white hover:bg-gray-50 text-gray-700 font-semibold py-2.5 px-6 
+           rounded-lg border-2 border-gray-300 hover:border-gray-400
+           transition-all duration-200 shadow-sm hover:shadow-md
+           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
   }
   
+  /* Danger Button - Red */
+  .btn-danger {
+    @apply bg-danger-500 hover:bg-danger-600 text-white font-semibold py-2.5 px-6 
+           rounded-lg transition-all duration-200 shadow-md hover:shadow-lg
+           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  /* Success Button - Green */
+  .btn-success {
+    @apply bg-success-500 hover:bg-success-600 text-white font-semibold py-2.5 px-6 
+           rounded-lg transition-all duration-200 shadow-md hover:shadow-lg
+           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  /* Input Field */
   .input-field {
-    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+    @apply w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg 
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
+           transition-all duration-200 bg-white
+           disabled:bg-gray-100 disabled:cursor-not-allowed
+           placeholder:text-gray-400;
   }
   
+  /* Card - Enhanced with better shadows */
   .card {
-    @apply bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow duration-200;
+    @apply bg-white rounded-xl shadow-card p-6 
+           hover:shadow-card-hover transition-shadow duration-300
+           border border-gray-100;
+  }
+  
+  /* Badge - Status indicators */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+  }
+  
+  .badge-primary {
+    @apply bg-primary-100 text-primary-700;
+  }
+  
+  .badge-success {
+    @apply bg-success-100 text-success-700;
+  }
+  
+  .badge-warning {
+    @apply bg-warning-100 text-warning-700;
+  }
+  
+  .badge-danger {
+    @apply bg-danger-100 text-danger-700;
+  }
+  
+  .badge-gray {
+    @apply bg-gray-100 text-gray-700;
+  }
+  
+  /* Alert - Notification boxes */
+  .alert {
+    @apply p-4 rounded-lg border-l-4;
+  }
+  
+  .alert-info {
+    @apply bg-primary-50 border-primary-500 text-primary-800;
+  }
+  
+  .alert-success {
+    @apply bg-success-50 border-success-500 text-success-800;
+  }
+  
+  .alert-warning {
+    @apply bg-warning-50 border-warning-500 text-warning-800;
+  }
+  
+  .alert-danger {
+    @apply bg-danger-50 border-danger-500 text-danger-800;
+  }
+}
+
+@layer utilities {
+  /* Gradient backgrounds */
+  .gradient-primary {
+    @apply bg-gradient-to-r from-primary-500 to-primary-600;
+  }
+  
+  .gradient-secondary {
+    @apply bg-gradient-to-r from-secondary-500 to-secondary-600;
+  }
+  
+  .gradient-accent {
+    @apply bg-gradient-to-r from-accent-500 to-accent-600;
+  }
+  
+  /* Text gradients */
+  .text-gradient-primary {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800;
+  }
+  
+  .text-gradient-secondary {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-secondary-600 to-secondary-800;
+  }
+  
+  /* Smooth animations */
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .animate-slide-in {
+    animation: slideIn 0.3s ease-out;
+  }
+  
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
   }
 }
