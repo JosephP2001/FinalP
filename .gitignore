@@ -56,4 +56,4 @@ frontend/.env.local
 frontend/.env.*.local
 
 #
-nginx.conf
+nginx.conf"docker-compose.yml" 
