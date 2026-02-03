@@ -4,6 +4,9 @@ import { Users, Trash2, Shield, ShieldOff, Search, Mail, Calendar, AlertCircle, 
 import Navbar from '../components/layout/Navbar';
 import { authService } from '../services/authService';
 import { adminService } from '../services/adminService';
+import StatsCard from '../components/common/StatsCard';
+import Alert from '../components/common/Alert';
+import { getInitials } from '../utils';
 
 const AdminUsers = () => {
   const navigate = useNavigate();
@@ -114,70 +117,50 @@ const AdminUsers = () => {
           <p className="text-gray-600">Manage system users and permissions</p>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats Cards - Using StatsCard component */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="card p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Users</p>
-                  <p className="text-3xl font-bold text-gray-800">{stats.users.total}</p>
-                  <p className="text-xs text-green-600 mt-1">+{stats.users.recentSignups} this week</p>
-                </div>
-                <div className="p-4 bg-blue-100 rounded-full">
-                  <Users className="text-blue-600" size={28} />
-                </div>
-              </div>
-            </div>
+            <StatsCard
+              icon={Users}
+              label="Total Users"
+              value={stats.users.total}
+              subtitle={`+${stats.users.recentSignups} this week`}
+              color="blue"
+            />
 
-            <div className="card p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Administrators</p>
-                  <p className="text-3xl font-bold text-purple-600">{stats.users.admins}</p>
-                </div>
-                <div className="p-4 bg-purple-100 rounded-full">
-                  <Shield className="text-purple-600" size={28} />
-                </div>
-              </div>
-            </div>
+            <StatsCard
+              icon={Shield}
+              label="Administrators"
+              value={stats.users.admins}
+              color="purple"
+            />
 
-            <div className="card p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Surveys</p>
-                  <p className="text-3xl font-bold text-green-600">{stats.surveys.total}</p>
-                  <p className="text-xs text-gray-500 mt-1">{stats.surveys.active} active</p>
-                </div>
-                <div className="p-4 bg-green-100 rounded-full">
-                  <Activity className="text-green-600" size={28} />
-                </div>
-              </div>
-            </div>
+            <StatsCard
+              icon={Activity}
+              label="Total Surveys"
+              value={stats.surveys.total}
+              subtitle={`${stats.surveys.active} active`}
+              color="green"
+            />
 
-            <div className="card p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Responses</p>
-                  <p className="text-3xl font-bold text-orange-600">{stats.responses.total}</p>
-                  <p className="text-xs text-gray-500 mt-1">Avg: {stats.responses.averagePerSurvey}/survey</p>
-                </div>
-                <div className="p-4 bg-orange-100 rounded-full">
-                  <TrendingUp className="text-orange-600" size={28} />
-                </div>
-              </div>
-            </div>
+            <StatsCard
+              icon={TrendingUp}
+              label="Total Responses"
+              value={stats.responses.total}
+              subtitle={`Avg: ${stats.responses.averagePerSurvey}/survey`}
+              color="orange"
+            />
           </div>
         )}
 
         {/* Message Alert */}
         {message.text && (
-          <div className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${
-            message.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 
-            'bg-red-50 text-red-800 border border-red-200'
-          }`}>
-            {message.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
-            <span>{message.text}</span>
+          <div className="mb-6">
+            <Alert
+              type={message.type}
+              message={message.text}
+              onClose={() => setMessage({ type: '', text: '' })}
+            />
           </div>
         )}
 
@@ -236,7 +219,7 @@ const AdminUsers = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                          {user.name.charAt(0).toUpperCase()}
+                          {getInitials(user.name)}
                         </div>
                         <div>
                           <p className="font-medium text-gray-900">{user.name}</p>

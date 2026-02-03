@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
-import { Search, Plus, Eye, Edit, Share2, Trash2, Copy } from 'lucide-react';
+import { Search, Plus, Eye, Edit, Trash2, Copy } from 'lucide-react';
 import { surveyService } from '../services/surveyService';
 import { CardSkeleton } from '../components/common/Skeleton';
+import EmptyState from '../components/common/EmptyState';
+import StatusBadge from '../components/common/StatusBadge';
+import { getTimeAgo, copyShareLink, calculateCompletionPercentage } from '../utils';
 
 const SurveyList = () => {
   const [surveys, setSurveys] = useState([]);
@@ -59,39 +62,6 @@ const SurveyList = () => {
     } catch (err) {
       alert(err.response?.data?.message || 'Error al eliminar encuesta');
     }
-  };
-
-  const copyShareLink = (id) => {
-    const link = `${window.location.origin}/surveys/${id}/respond`;
-    navigator.clipboard.writeText(link);
-    alert('¡Enlace copiado al portapapeles!');
-  };
-
-  const getStatusBadge = (status) => {
-    const badges = {
-      active: { bg: 'bg-green-100', text: 'text-green-700', label: 'ACTIVA' },
-      closed: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'CERRADA' },
-      draft: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'BORRADOR' }
-    };
-    const badge = badges[status] || badges.draft;
-    return (
-      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${badge.bg} ${badge.text}`}>
-        {badge.label}
-      </span>
-    );
-  };
-
-  const getTimeAgo = (date) => {
-    const now = new Date();
-    const created = new Date(date);
-    const diffMs = now - created;
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return 'Hoy';
-    if (diffDays === 1) return 'Ayer';
-    if (diffDays < 7) return `Hace ${diffDays} días`;
-    if (diffDays < 30) return `Hace ${Math.floor(diffDays / 7)} semanas`;
-    return `Hace ${Math.floor(diffDays / 30)} meses`;
   };
 
   return (
@@ -155,39 +125,35 @@ const SurveyList = () => {
           </div>
         ) : filteredSurveys.length === 0 ? (
           /* Empty State */
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">📋</div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">
-              {searchTerm || statusFilter !== 'all' 
-                ? 'No se encontraron encuestas'
-                : 'Aún no tienes encuestas'}
-            </h3>
-            <p className="text-gray-500 mb-6">
-              {searchTerm || statusFilter !== 'all'
-                ? 'Intenta con otros filtros'
-                : 'Crea tu primera encuesta para comenzar'}
-            </p>
-            {!searchTerm && statusFilter === 'all' && (
-              <Link to="/surveys/create">
-                <button className="btn-primary">
-                  + Crear Nueva Encuesta
-                </button>
-              </Link>
-            )}
-          </div>
+          searchTerm || statusFilter !== 'all' ? (
+            <EmptyState
+              icon="🔍"
+              title="No se encontraron encuestas"
+              description="Intenta con otros filtros"
+            />
+          ) : (
+            <EmptyState
+              icon="📋"
+              title="Aún no tienes encuestas"
+              description="Crea tu primera encuesta para comenzar"
+              actionLabel="+ Crear Nueva Encuesta"
+              actionLink="/surveys/create"
+            />
+          )
         ) : (
           /* Survey Cards Grid */
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {filteredSurveys.map((survey) => {
-              const percentage = survey.settings?.maxResponses 
-                ? Math.round((survey.responseCount / survey.settings.maxResponses) * 100)
-                : 0;
+              const percentage = calculateCompletionPercentage(
+                survey.responseCount,
+                survey.settings?.maxResponses
+              );
 
               return (
                 <div key={survey._id} className="card hover:shadow-lg transition-shadow">
                   {/* Card Header */}
                   <div className="flex justify-between items-start mb-3">
-                    {getStatusBadge(survey.status)}
+                    <StatusBadge status={survey.status} />
                     <span className="text-sm text-gray-500">
                       {getTimeAgo(survey.createdAt)}
                     </span>

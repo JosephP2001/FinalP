@@ -9,6 +9,7 @@ import { surveySchema } from '../schemas/surveySchemas';
 import FormInput from '../components/common/FormInput';
 import FormTextarea from '../components/common/FormTextarea';
 import FormSelect from '../components/common/FormSelect';
+import { combineDateAndTime, validateSurveyData, formatSurveyDataForAPI } from '../utils';
 
 const SurveyBuilder = () => {
   const navigate = useNavigate();
@@ -45,16 +46,8 @@ const SurveyBuilder = () => {
   useEffect(() => {
     if (Object.keys(errors).length > 0) {
       console.log('⚠️ Validation Errors:', errors);
-      //console.log('⚠️ Errors stringified:', JSON.stringify(errors, null, 2));
     }
   }, [errors]);
-
-  useEffect(() => {
-    const subscription = watch((value) => {
-      console.log('Form data changed:', value);
-    });
-    return () => subscription.unsubscribe();
-  }, [watch]);
 
   const questionTypes = [
     { value: 'text', label: '📝 Free Text' },
@@ -72,62 +65,36 @@ const SurveyBuilder = () => {
     });
   };
 
-  const combineDateAndTime = (date, time) => {
-    if (!date) return null;
-    
-    const timeValue = time || '00:00';
-    const dateTimeString = `${date}T${timeValue}:00`;
-    const dateObj = new Date(dateTimeString);
-    
-    console.log(`Combining: ${date} ${timeValue} -> ${dateObj.toISOString()}`);
-    
-    return dateObj.toISOString();
-  };
-
   const onSubmit = async (data, publishNow = false) => {
     try {
-      console.log(' [SUBMIT] Starting submission...');
-      console.log(' [SUBMIT] Form data:', JSON.stringify(data, null, 2));
-      
+      console.log('🚀 [SUBMIT] Starting submission...');
       setApiError('');
 
-      if (data.questions.length === 0) {
-        console.log(' [SUBMIT] No questions!');
-        setApiError('You must add at least one question');
+      // Validate survey data using utility
+      const validation = validateSurveyData(data);
+      if (!validation.valid) {
+        setApiError(validation.errors[0]);
         return;
       }
 
-      const invalidMultiple = data.questions.filter(
-        q => q.type === 'multiple' && (!q.options || q.options.length < 2)
+      // Format survey data for API
+      const surveyData = formatSurveyDataForAPI(data, publishNow);
+
+      // Add combined date and time
+      surveyData.settings.startDate = combineDateAndTime(
+        data.settings.startDate,
+        data.settings.startTime
+      );
+      surveyData.settings.endDate = combineDateAndTime(
+        data.settings.endDate,
+        data.settings.endTime
       );
 
-      if (invalidMultiple.length > 0) {
-        console.log(' [SUBMIT] Invalid multiple choice questions:', invalidMultiple);
-        setApiError('Multiple choice questions must have at least 2 options');
-        return;
-      }
-
-      const surveyData = {
-        title: data.title,
-        description: data.description,
-        status: publishNow ? 'active' : 'draft',
-        settings: {
-          access: data.settings.access,
-          maxResponses: data.settings.maxResponses ? parseInt(data.settings.maxResponses) : undefined,
-          startDate: combineDateAndTime(data.settings.startDate, data.settings.startTime),
-          endDate: combineDateAndTime(data.settings.endDate, data.settings.endTime)
-        },
-        questions: data.questions.map((q, idx) => ({
-          ...q,
-          order: idx
-        }))
-      };
-
-      console.log(' [SUBMIT] Sending to API:', JSON.stringify(surveyData, null, 2));
+      console.log('✅ [SUBMIT] Sending to API:', JSON.stringify(surveyData, null, 2));
 
       await surveyService.createSurvey(surveyData);
 
-      console.log(' [SUBMIT] Success!');
+      console.log('✅ [SUBMIT] Success!');
 
       alert(publishNow 
         ? 'Survey published successfully!' 
@@ -136,8 +103,7 @@ const SurveyBuilder = () => {
 
       navigate('/surveys');
     } catch (err) {
-      console.error(' [SUBMIT] Error:', err);
-      console.error(' [SUBMIT] Error response:', err.response?.data);
+      console.error('❌ [SUBMIT] Error:', err);
       setApiError(err.response?.data?.message || 'Error creating survey');
     }
   };

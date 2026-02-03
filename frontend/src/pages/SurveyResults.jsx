@@ -9,11 +9,24 @@ import {
   TrendingUp, Users, Calendar, ArrowLeft, Sparkles, X 
 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
+import StatsCard from '../components/common/StatsCard';
 import { surveyService } from '../services/surveyService';
 import { responseService } from '../services/responseService';
 import { exportService } from '../services/exportService';
 import { aiService } from '../services/aiService';
 import { StatsCardSkeleton, QuestionResultsSkeleton } from '../components/common/Skeleton';
+
+// Import utilities
+import {
+  calculateCompletionRate,
+  getLastResponseDate,
+  calculateScaleStats,
+  calculateFrequencyDistribution,
+  groupResponsesByDate
+} from '../utils/statisticsUtils';
+
+import { getSentimentColor } from '../utils/uiUtils';
+import { getErrorMessage } from '../utils/validationUtils';
 
 const SurveyResults = () => {
   const { id } = useParams();
@@ -42,7 +55,7 @@ const SurveyResults = () => {
       setResponses(responsesData.data);
     } catch (err) {
       console.error('Error loading survey results:', err);
-      setError(err.response?.data?.message || 'Error al cargar resultados');
+      setError(getErrorMessage(err, 'Error al cargar resultados'));
     } finally {
       setLoading(false);
     }
@@ -85,7 +98,7 @@ const SurveyResults = () => {
       }
     } catch (err) {
       console.error('AI analysis error:', err);
-      alert('Error al generar análisis: ' + (err.response?.data?.message || err.message));
+      alert('Error al generar análisis: ' + getErrorMessage(err));
     } finally {
       setAiLoading(false);
     }
@@ -134,6 +147,9 @@ const SurveyResults = () => {
       </div>
     );
   }
+
+  const completionRate = calculateCompletionRate(responses, survey);
+  const lastResponse = getLastResponseDate(responses);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -206,157 +222,128 @@ const SurveyResults = () => {
           </div>
         </div>
 
-        {/* Statistics Cards */}
+        {/* Statistics Cards - Using StatsCard Component */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <StatCard
+          <StatsCard
             icon={Users}
-            label="Total de Respuestas"
+            label="Total Respuestas"
             value={responses.length}
+            subtitle={survey.settings?.maxResponses 
+              ? `de ${survey.settings.maxResponses} máximo` 
+              : 'Sin límite'
+            }
             color="blue"
           />
-          <StatCard
+          
+          <StatsCard
             icon={TrendingUp}
-            label="Tasa de Finalización"
-            value={`${calculateCompletionRate(responses, survey)}%`}
+            label="Tasa de Completitud"
+            value={`${completionRate}%`}
             color="green"
           />
-          <StatCard
+          
+          <StatsCard
             icon={Calendar}
             label="Última Respuesta"
-            value={getLastResponseDate(responses)}
+            value={lastResponse}
             color="purple"
           />
         </div>
 
-        {/* Questions Results */}
+        {/* Question Results */}
         <div className="space-y-6">
-          {survey.questions.map((question, index) => (
-            <QuestionResults
-              key={question._id}
-              question={question}
-              questionNumber={index + 1}
-              responses={responses}
-            />
-          ))}
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">
+            Resultados por Pregunta
+          </h2>
+
+          {responses.length === 0 ? (
+            <div className="text-center py-16 bg-white rounded-xl border-2 border-dashed border-gray-300">
+              <Users size={64} className="mx-auto text-gray-400 mb-4" />
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                Aún no hay respuestas
+              </h3>
+              <p className="text-gray-500">
+                Comparte tu encuesta para comenzar a recibir respuestas
+              </p>
+            </div>
+          ) : (
+            survey.questions.map((question, index) => (
+              <QuestionResult
+                key={question._id}
+                question={question}
+                responses={responses}
+                index={index}
+              />
+            ))
+          )}
         </div>
-
-        {/* No Responses Message */}
-        {responses.length === 0 && (
-          <div className="card p-12 text-center">
-            <div className="text-6xl mb-4">📊</div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">
-              Aún no hay respuestas
-            </h3>
-            <p className="text-gray-500">
-              Comparte el enlace de tu encuesta para empezar a recibir respuestas
-            </p>
-          </div>
-        )}
-
-        {/* AI Analysis Modal */}
-        {showAiModal && aiAnalysis && (
-          <AIAnalysisModal
-            analysis={aiAnalysis}
-            onClose={() => setShowAiModal(false)}
-          />
-        )}
       </div>
+
+      {/* AI Analysis Modal */}
+      {showAiModal && aiAnalysis && (
+        <AIAnalysisModal
+          analysis={aiAnalysis}
+          onClose={() => setShowAiModal(false)}
+        />
+      )}
     </div>
   );
 };
 
-// Statistics Card Component
-const StatCard = ({ icon: Icon, label, value, color }) => {
-  const colorClasses = {
-    blue: 'bg-blue-100 text-blue-600',
-    green: 'bg-green-100 text-green-600',
-    purple: 'bg-purple-100 text-purple-600',
-    orange: 'bg-orange-100 text-orange-600'
-  };
-
-  return (
-    <div className="card">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-600 mb-1">{label}</p>
-          <p className="text-3xl font-bold text-gray-800">{value}</p>
-        </div>
-        <div className={`p-4 rounded-full ${colorClasses[color]}`}>
-          <Icon size={28} />
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Question Results Component
-const QuestionResults = ({ question, questionNumber, responses }) => {
+// Question Result Component
+const QuestionResult = ({ question, responses, index }) => {
   const answers = responses
     .map(r => r.answers.find(a => a.questionId === question._id))
     .filter(Boolean);
 
-  const renderChart = () => {
-    switch (question.type) {
-      case 'multiple':
-        return <MultipleChoiceChart question={question} answers={answers} />;
-      case 'scale':
-        return <ScaleChart answers={answers} />;
-      case 'text':
-        return <TextResponses answers={answers} />;
-      case 'date':
-        return <DateResponses answers={answers} />;
-      default:
-        return <div>Tipo de pregunta no soportado</div>;
-    }
-  };
-
   return (
     <div className="card">
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-2">
-          {questionNumber}. {question.text}
-        </h3>
+      <div className="mb-4">
+        <div className="flex items-start justify-between mb-2">
+          <h3 className="text-lg font-semibold text-gray-800">
+            {index + 1}. {question.text}
+          </h3>
+          {question.required && (
+            <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">
+              Obligatoria
+            </span>
+          )}
+        </div>
         <p className="text-sm text-gray-500">
           {answers.length} respuesta{answers.length !== 1 ? 's' : ''}
         </p>
       </div>
 
-      {answers.length > 0 ? renderChart() : (
-        <div className="text-center py-8 text-gray-400">
-          Sin respuestas aún
-        </div>
+      {answers.length > 0 && (
+        <>
+          {question.type === 'multiple' && (
+            <MultipleChoiceChart answers={answers} question={question} />
+          )}
+          {question.type === 'scale' && (
+            <ScaleChart answers={answers} />
+          )}
+          {question.type === 'text' && (
+            <TextResponses answers={answers} />
+          )}
+          {question.type === 'date' && (
+            <DateResponses answers={answers} />
+          )}
+        </>
       )}
     </div>
   );
 };
 
 // Multiple Choice Chart Component
-const MultipleChoiceChart = ({ question, answers }) => {
-  const data = question.options.map(option => ({
-    name: option,
-    value: answers.filter(a => a.value === option).length
-  }));
+const MultipleChoiceChart = ({ answers, question }) => {
+  const answerValues = answers.map(a => a.value);
+  const data = calculateFrequencyDistribution(answerValues, question.options);
 
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
-  const total = answers.length;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div>
-        <h4 className="text-sm font-medium text-gray-700 mb-4">Distribución</h4>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="value" fill="#3B82F6" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div>
-        <h4 className="text-sm font-medium text-gray-700 mb-4">Porcentajes</h4>
         <ResponsiveContainer width="100%" height={300}>
           <PieChart>
             <Pie
@@ -364,8 +351,8 @@ const MultipleChoiceChart = ({ question, answers }) => {
               cx="50%"
               cy="50%"
               labelLine={false}
-              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-              outerRadius={80}
+              label={({ name, percentage }) => `${name}: ${percentage}%`}
+              outerRadius={100}
               fill="#8884d8"
               dataKey="value"
             >
@@ -378,86 +365,102 @@ const MultipleChoiceChart = ({ question, answers }) => {
         </ResponsiveContainer>
       </div>
 
-      <div className="lg:col-span-2">
-        <h4 className="text-sm font-medium text-gray-700 mb-4">Resumen</h4>
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Opción</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Respuestas</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Porcentaje</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {data.map((item, index) => (
-                <tr key={index}>
-                  <td className="px-4 py-3 text-sm text-gray-900">{item.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900">{item.value}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    {total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Tooltip />
+            <Bar dataKey="value" fill="#3B82F6" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="lg:col-span-2 bg-gray-50 rounded-lg p-4">
+        <h4 className="text-sm font-medium text-gray-700 mb-3">Distribución detallada:</h4>
+        <div className="space-y-2">
+          {data.map((item, index) => (
+            <div key={index} className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div 
+                  className="w-4 h-4 rounded"
+                  style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                ></div>
+                <span className="text-gray-700">{item.name}</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-gray-600">{item.value} respuestas</span>
+                <span className="font-semibold text-gray-800 w-16 text-right">
+                  {item.percentage}%
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
   );
 };
 
-// Scale Chart Component
+// Scale Chart Component  
 const ScaleChart = ({ answers }) => {
-  const scaleCounts = {};
-  for (let i = 1; i <= 10; i++) {
-    scaleCounts[i] = 0;
-  }
+  const values = answers.map(a => Number(a.value));
+  const stats = calculateScaleStats(values);
 
-  answers.forEach(a => {
-    const value = parseInt(a.value);
-    if (value >= 1 && value <= 10) {
-      scaleCounts[value]++;
+  const distribution = {};
+  for (let i = 1; i <= 10; i++) {
+    distribution[i] = 0;
+  }
+  values.forEach(val => {
+    if (val >= 1 && val <= 10) {
+      distribution[val]++;
     }
   });
 
-  const data = Object.entries(scaleCounts).map(([key, value]) => ({
-    scale: key,
-    count: value
+  const data = Object.entries(distribution).map(([value, count]) => ({
+    value: Number(value),
+    count
   }));
-
-  const values = answers.map(a => parseInt(a.value));
-  const avg = values.reduce((a, b) => a + b, 0) / values.length;
-  const sorted = [...values].sort((a, b) => a - b);
-  const median = sorted[Math.floor(sorted.length / 2)];
-  const mode = values.sort((a, b) =>
-    values.filter(v => v === a).length - values.filter(v => v === b).length
-  ).pop();
 
   return (
     <div>
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-blue-50 rounded-lg p-4 text-center">
-          <p className="text-sm text-gray-600">Promedio</p>
-          <p className="text-2xl font-bold text-blue-600">{avg.toFixed(2)}</p>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-blue-50 rounded-lg p-4">
+          <p className="text-sm text-blue-600 mb-1">Promedio</p>
+          <p className="text-2xl font-bold text-blue-700">{stats.average}</p>
         </div>
-        <div className="bg-green-50 rounded-lg p-4 text-center">
-          <p className="text-sm text-gray-600">Mediana</p>
-          <p className="text-2xl font-bold text-green-600">{median}</p>
+        <div className="bg-green-50 rounded-lg p-4">
+          <p className="text-sm text-green-600 mb-1">Mínimo</p>
+          <p className="text-2xl font-bold text-green-700">{stats.min}</p>
         </div>
-        <div className="bg-purple-50 rounded-lg p-4 text-center">
-          <p className="text-sm text-gray-600">Moda</p>
-          <p className="text-2xl font-bold text-purple-600">{mode}</p>
+        <div className="bg-orange-50 rounded-lg p-4">
+          <p className="text-sm text-orange-600 mb-1">Máximo</p>
+          <p className="text-2xl font-bold text-orange-700">{stats.max}</p>
+        </div>
+        <div className="bg-purple-50 rounded-lg p-4">
+          <p className="text-sm text-purple-600 mb-1">Respuestas</p>
+          <p className="text-2xl font-bold text-purple-700">{stats.count}</p>
         </div>
       </div>
 
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="scale" />
-          <YAxis />
+          <XAxis 
+            dataKey="value" 
+            label={{ value: 'Calificación', position: 'insideBottom', offset: -5 }}
+          />
+          <YAxis label={{ value: 'Frecuencia', angle: -90, position: 'insideLeft' }} />
           <Tooltip />
-          <Bar dataKey="count" fill="#8B5CF6" />
+          <Bar dataKey="count" fill="#3B82F6">
+            {data.map((entry, index) => (
+              <Cell 
+                key={`cell-${index}`} 
+                fill={entry.value <= 3 ? '#EF4444' : entry.value <= 7 ? '#F59E0B' : '#10B981'} 
+              />
+            ))}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -472,7 +475,15 @@ const TextResponses = ({ answers }) => {
   return (
     <div className="space-y-3">
       {displayedAnswers.map((answer, index) => (
-        <div key={index} className="bg-gray-50 rounded-lg p-4">
+        <div key={index} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-medium text-gray-500">
+              Respuesta #{index + 1}
+            </span>
+            <span className="text-xs text-gray-400">
+              {new Date(answer.submittedAt).toLocaleString('es-EC')}
+            </span>
+          </div>
           <p className="text-gray-800">{answer.value}</p>
         </div>
       ))}
@@ -491,15 +502,7 @@ const TextResponses = ({ answers }) => {
 
 // Date Responses Component
 const DateResponses = ({ answers }) => {
-  const dateCounts = {};
-  answers.forEach(a => {
-    const date = new Date(a.value).toLocaleDateString('es-EC');
-    dateCounts[date] = (dateCounts[date] || 0) + 1;
-  });
-
-  const data = Object.entries(dateCounts)
-    .map(([date, count]) => ({ date, count }))
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
+  const data = groupResponsesByDate(answers.map(a => ({ submittedAt: a.value })));
 
   return (
     <div>
@@ -528,38 +531,8 @@ const DateResponses = ({ answers }) => {
   );
 };
 
-// Helper Functions
-const calculateCompletionRate = (responses, survey) => {
-  if (!survey.settings?.maxResponses) return 100;
-  return Math.min(100, ((responses.length / survey.settings.maxResponses) * 100).toFixed(1));
-};
-
-const getLastResponseDate = (responses) => {
-  if (responses.length === 0) return 'N/A';
-  const dates = responses.map(r => new Date(r.submittedAt));
-  const latest = new Date(Math.max(...dates));
-  return latest.toLocaleDateString('es-EC', { 
-    year: 'numeric', 
-    month: 'short', 
-    day: 'numeric' 
-  });
-};
-
 // AI Analysis Modal Component
 const AIAnalysisModal = ({ analysis, onClose }) => {
-  const getSentimentColor = (sentiment) => {
-    switch (sentiment.toLowerCase()) {
-      case 'positive':
-      case 'positivo':
-        return 'text-green-600 bg-green-50';
-      case 'negative':
-      case 'negativo':
-        return 'text-red-600 bg-red-50';
-      default:
-        return 'text-gray-600 bg-gray-50';
-    }
-  };
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -662,7 +635,7 @@ const AIAnalysisModal = ({ analysis, onClose }) => {
                   </div>
                 )}
               </div>
-            </div>
+            </div> 
           )}
 
           <div className="text-center text-xs text-gray-500">

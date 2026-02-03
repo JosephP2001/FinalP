@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import { authService } from '../services/authService';
-import { Shield, FileText, TrendingUp } from 'lucide-react';
+import { Shield, FileText, TrendingUp, Users } from 'lucide-react';
 import api from '../services/api';
+import StatsCard from '../components/common/StatsCard';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -79,43 +80,28 @@ const AdminDashboard = () => {
           <p className="text-gray-600">Vista completa del sistema de encuestas</p>
         </div>
 
-        {/* Statistics Cards - Only 3 cards */}
+        {/* Statistics Cards - Using StatsCard component */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="card p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Encuestas Totales</p>
-                <p className="text-3xl font-bold text-gray-800">{stats.totalSurveys}</p>
-              </div>
-              <div className="p-4 bg-primary-100 rounded-full">
-                <FileText className="text-primary-600" size={28} />
-              </div>
-            </div>
-          </div>
+          <StatsCard
+            icon={FileText}
+            label="Encuestas Totales"
+            value={stats.totalSurveys}
+            color="primary"
+          />
 
-          <div className="card p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Encuestas Activas</p>
-                <p className="text-3xl font-bold text-green-600">{stats.activeSurveys}</p>
-              </div>
-              <div className="p-4 bg-green-100 rounded-full">
-                <TrendingUp className="text-green-600" size={28} />
-              </div>
-            </div>
-          </div>
+          <StatsCard
+            icon={TrendingUp}
+            label="Encuestas Activas"
+            value={stats.activeSurveys}
+            color="green"
+          />
 
-          <div className="card p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Total Respuestas</p>
-                <p className="text-3xl font-bold text-purple-600">{stats.totalResponses}</p>
-              </div>
-              <div className="p-4 bg-purple-100 rounded-full">
-                <TrendingUp className="text-purple-600" size={28} />
-              </div>
-            </div>
-          </div>
+          <StatsCard
+            icon={Users}
+            label="Total Respuestas"
+            value={stats.totalResponses}
+            color="purple"
+          />
         </div>
 
         {/* All Surveys Table */}

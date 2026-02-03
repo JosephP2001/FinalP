@@ -5,6 +5,9 @@ import { BarChart3, Users, FileText, TrendingUp, Eye, Plus } from 'lucide-react'
 import { surveyService } from '../services/surveyService';
 import { authService } from '../services/authService';
 import { StatsCardSkeleton, RecentSurveySkeleton } from '../components/common/Skeleton';
+import StatsCard from '../components/common/StatsCard';
+import { getGreeting, getTimeAgo } from '../utils';
+import { getFirstName, calculateAverageResponseRate } from '../utils';
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -33,20 +36,13 @@ const Dashboard = () => {
       const totalSurveys = surveys.length;
       const activeSurveys = surveys.filter(s => s.status === 'active').length;
       const totalResponses = surveys.reduce((sum, s) => sum + (s.responseCount || 0), 0);
-      
-      const surveysWithMax = surveys.filter(s => s.settings?.maxResponses);
-      const avgResponseRate = surveysWithMax.length > 0
-        ? surveysWithMax.reduce((sum, s) => {
-            const rate = (s.responseCount / s.settings.maxResponses) * 100;
-            return sum + rate;
-          }, 0) / surveysWithMax.length
-        : 0;
+      const avgResponseRate = calculateAverageResponseRate(surveys);
 
       setStats({
         totalSurveys,
         activeSurveys,
         totalResponses,
-        avgResponseRate: Math.round(avgResponseRate)
+        avgResponseRate
       });
 
       setRecentSurveys(surveys.slice(0, 5));
@@ -56,25 +52,6 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Buenos días';
-    if (hour < 18) return 'Buenas tardes';
-    return 'Buenas noches';
-  };
-
-  const getTimeAgo = (date) => {
-    const now = new Date();
-    const created = new Date(date);
-    const diffMs = now - created;
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return 'Hoy';
-    if (diffDays === 1) return 'Ayer';
-    if (diffDays < 7) return `Hace ${diffDays} días`;
-    return `Hace ${Math.floor(diffDays / 7)} semanas`;
   };
 
   return (
@@ -92,7 +69,7 @@ const Dashboard = () => {
           ) : (
             <>
               <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                {getGreeting()}, {user?.name?.split(' ')[0] || 'Usuario'} 👋
+                {getGreeting()}, {getFirstName(user?.name)} 👋
               </h1>
               <p className="text-gray-600">
                 Aquí está el resumen de tus encuestas
@@ -111,69 +88,37 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {/* Total Surveys */}
-            <div className="card hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Encuestas</p>
-                  <p className="text-3xl font-bold text-gray-800">{stats.totalSurveys}</p>
-                </div>
-                <div className="p-4 bg-primary-100 rounded-full">
-                  <FileText className="text-primary-600" size={28} />
-                </div>
-              </div>
-              <div className="mt-4 text-sm text-gray-500">
-                {stats.activeSurveys} activas
-              </div>
-            </div>
+            <StatsCard
+              icon={FileText}
+              label="Total Encuestas"
+              value={stats.totalSurveys}
+              subtitle={`${stats.activeSurveys} activas`}
+              color="primary"
+            />
 
-            {/* Active Surveys */}
-            <div className="card hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Encuestas Activas</p>
-                  <p className="text-3xl font-bold text-green-600">{stats.activeSurveys}</p>
-                </div>
-                <div className="p-4 bg-green-100 rounded-full">
-                  <TrendingUp className="text-green-600" size={28} />
-                </div>
-              </div>
-              <div className="mt-4 text-sm text-gray-500">
-                Recopilando respuestas
-              </div>
-            </div>
+            <StatsCard
+              icon={TrendingUp}
+              label="Encuestas Activas"
+              value={stats.activeSurveys}
+              subtitle="Recopilando respuestas"
+              color="green"
+            />
 
-            {/* Total Responses */}
-            <div className="card hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Respuestas</p>
-                  <p className="text-3xl font-bold text-purple-600">{stats.totalResponses}</p>
-                </div>
-                <div className="p-4 bg-purple-100 rounded-full">
-                  <Users className="text-purple-600" size={28} />
-                </div>
-              </div>
-              <div className="mt-4 text-sm text-gray-500">
-                Datos recopilados
-              </div>
-            </div>
+            <StatsCard
+              icon={Users}
+              label="Total Respuestas"
+              value={stats.totalResponses}
+              subtitle="Datos recopilados"
+              color="purple"
+            />
 
-            {/* Average Response Rate */}
-            <div className="card hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Tasa Promedio</p>
-                  <p className="text-3xl font-bold text-blue-600">{stats.avgResponseRate}%</p>
-                </div>
-                <div className="p-4 bg-blue-100 rounded-full">
-                  <BarChart3 className="text-blue-600" size={28} />
-                </div>
-              </div>
-              <div className="mt-4 text-sm text-gray-500">
-                De completitud
-              </div>
-            </div>
+            <StatsCard
+              icon={BarChart3}
+              label="Tasa Promedio"
+              value={`${stats.avgResponseRate}%`}
+              subtitle="De completitud"
+              color="blue"
+            />
           </div>
         )}
 

@@ -10,6 +10,7 @@ import FormInput from '../components/common/FormInput';
 import FormTextarea from '../components/common/FormTextarea';
 import FormSelect from '../components/common/FormSelect';
 import { FormSkeleton, QuestionBuilderSkeleton } from '../components/common/Skeleton';
+import { formatDateISO, validateSurveyData, formatSurveyDataForAPI } from '../utils';
 
 const SurveyEdit = () => {
   const { id } = useParams();
@@ -71,12 +72,8 @@ const SurveyEdit = () => {
         title: survey.title || '',
         description: survey.description || '',
         settings: {
-          startDate: survey.settings?.startDate 
-            ? new Date(survey.settings.startDate).toISOString().split('T')[0] 
-            : '',
-          endDate: survey.settings?.endDate 
-            ? new Date(survey.settings.endDate).toISOString().split('T')[0] 
-            : '',
+          startDate: formatDateISO(survey.settings?.startDate),
+          endDate: formatDateISO(survey.settings?.endDate),
           access: survey.settings?.access || 'public',
           maxResponses: survey.settings?.maxResponses?.toString() || ''
         },
@@ -105,28 +102,15 @@ const SurveyEdit = () => {
     try {
       setApiError('');
 
-      if (data.questions.length === 0) {
-        setApiError('Debes agregar al menos una pregunta');
+      // Validate using utility
+      const validation = validateSurveyData(data);
+      if (!validation.valid) {
+        setApiError(validation.errors[0]);
         return;
       }
 
-      const invalidMultiple = data.questions.filter(
-        q => q.type === 'multiple' && (!q.options || q.options.length < 2)
-      );
-
-      if (invalidMultiple.length > 0) {
-        setApiError('Las preguntas de opción múltiple deben tener al menos 2 opciones');
-        return;
-      }
-
-      const surveyData = {
-        ...data,
-        status: publishNow ? 'active' : 'draft',
-        questions: data.questions.map((q, idx) => ({
-          ...q,
-          order: idx
-        }))
-      };
+      // Format using utility
+      const surveyData = formatSurveyDataForAPI(data, publishNow);
 
       await surveyService.updateSurvey(id, surveyData);
 

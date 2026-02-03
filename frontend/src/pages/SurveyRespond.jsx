@@ -8,6 +8,8 @@ import { responseService } from "../services/responseService";
 import { responseSchema } from "../schemas/responseSchemas";
 import FormInput from "../components/common/FormInput";
 import { Skeleton } from "../components/common/Skeleton";
+import Alert from "../components/common/Alert";
+import { checkSurveyAccess, validateResponseData, formatResponseDataForAPI, getErrorMessage } from "../utils";
 
 const SurveyRespond = () => {
   const { id } = useParams();
@@ -40,50 +42,19 @@ const SurveyRespond = () => {
       setLoading(true);
       const data = await surveyService.getSurvey(id);
 
-      // Validaciones que deben bloquear el acceso
-      if (data.data.status !== "active") {
-        setError("Esta encuesta no está disponible actualmente");
-        setSurvey(null); // ✅ NO cargar la encuesta
-        setLoading(false);
-        return; // ✅ DETENER aquí
-      }
-
-      const now = new Date();
-      if (
-        data.data.settings?.startDate &&
-        new Date(data.data.settings.startDate) > now
-      ) {
-        setError("Esta encuesta aún no ha comenzado");
+      // Check survey access using utility
+      const access = checkSurveyAccess(data.data);
+      if (!access.accessible) {
+        setError(access.reason);
         setSurvey(null);
         setLoading(false);
         return;
       }
 
-      if (
-        data.data.settings?.endDate &&
-        new Date(data.data.settings.endDate) < now
-      ) {
-        setError("Esta encuesta ha finalizado");
-        setSurvey(null);
-        setLoading(false);
-        return;
-      }
-
-      if (
-        data.data.settings?.maxResponses &&
-        data.data.responseCount >= data.data.settings.maxResponses
-      ) {
-        setError("Esta encuesta ha alcanzado el límite de respuestas");
-        setSurvey(null);
-        setLoading(false);
-        return;
-      }
-
-      
       setSurvey(data.data);
-      setError(""); // Clean any previous error
+      setError("");
     } catch (err) {
-      setError(err.response?.data?.message || "Error al cargar la encuesta");
+      setError(getErrorMessage(err, "Error al cargar la encuesta"));
       setSurvey(null);
     } finally {
       setLoading(false);
@@ -92,54 +63,29 @@ const SurveyRespond = () => {
 
   const onSubmit = async (data) => {
     try {
-      console.log(" [RESPONSE] Starting submission...");
-      console.log(" [RESPONSE] Raw form data:", data);
-
+      console.log("📝 [RESPONSE] Starting submission...");
       setError("");
 
-      if (!data.respondentEmail || data.respondentEmail.trim() === "") {
-        console.log(" [RESPONSE] Email is missing!");
-        setError("El email es obligatorio");
+      // Get required questions
+      const requiredQuestions = survey.questions
+        .filter(q => q.required)
+        .map(q => q._id);
+
+      // Validate using utility
+      const validation = validateResponseData(data, requiredQuestions);
+      if (!validation.valid) {
+        setError(validation.errors[0]);
         return;
       }
 
-      const requiredQuestions = survey.questions.filter((q) => q.required);
-      const missingAnswers = requiredQuestions.filter(
-        (q) => !data.answers[q._id] || data.answers[q._id] === "",
-      );
+      // Format for API using utility
+      const payload = formatResponseDataForAPI(data);
 
-      if (missingAnswers.length > 0) {
-        console.log(" [RESPONSE] Missing answers:", missingAnswers);
-        setError(
-          `Por favor responde todas las preguntas obligatorias (${missingAnswers.length} faltantes)`,
-        );
-        return;
-      }
-
-      const formattedAnswers = Object.entries(data.answers)
-        .filter(
-          ([_, value]) => value !== "" && value !== null && value !== undefined,
-        )
-        .map(([questionId, value]) => ({
-          questionId,
-          value,
-        }));
-
-      console.log("📝 [RESPONSE] Formatted answers:", formattedAnswers);
-
-      const payload = {
-        answers: formattedAnswers,
-        respondentEmail: data.respondentEmail.trim(),
-      };
-
-      console.log(
-        "🚀 [RESPONSE] Sending to API:",
-        JSON.stringify(payload, null, 2),
-      );
+      console.log("🚀 [RESPONSE] Sending to API:", JSON.stringify(payload, null, 2));
 
       await responseService.submitResponse(id, payload);
 
-      console.log(" [RESPONSE] Success!");
+      console.log("✅ [RESPONSE] Success!");
 
       setSuccess(true);
 
@@ -147,9 +93,8 @@ const SurveyRespond = () => {
         navigate("/");
       }, 3000);
     } catch (err) {
-      console.error(" [RESPONSE] Error:", err);
-      console.error(" [RESPONSE] Error response:", err.response?.data);
-      setError(err.response?.data?.message || "Error al enviar respuesta");
+      console.error("❌ [RESPONSE] Error:", err);
+      setError(getErrorMessage(err, "Error al enviar respuesta"));
     }
   };
 
@@ -380,9 +325,8 @@ const SurveyRespond = () => {
           className="bg-white rounded-b-2xl shadow-2xl p-8"
         >
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
-              <AlertCircle size={20} />
-              <span className="text-sm">{error}</span>
+            <div className="mb-6">
+              <Alert type="error" message={error} />
             </div>
           )}
 
