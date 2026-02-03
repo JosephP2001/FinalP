@@ -54,3 +54,6 @@ backend/temp/
 # Frontend specific
 frontend/.env.local
 frontend/.env.*.local
+
+#
+nginx.conf
