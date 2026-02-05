@@ -4,17 +4,47 @@
  */
 
 /**
- * Copy text to clipboard
+ * Copy text to clipboard with fallback for HTTP contexts
  * @param {string} text - Text to copy
  * @param {string} successMessage - Success message to show (optional)
  */
 export const copyToClipboard = async (text, successMessage = '¡Copiado al portapapeles!') => {
   try {
-    await navigator.clipboard.writeText(text);
-    alert(successMessage);
+    // Try modern Clipboard API first (requires HTTPS or localhost)
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      alert(successMessage);
+      return;
+    }
+    
+    // Fallback for HTTP contexts
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+      const successful = document.execCommand('copy');
+      if (successful) {
+        alert(successMessage);
+      } else {
+        throw new Error('Copy command failed');
+      }
+    } catch (err) {
+      console.error('Fallback copy failed:', err);
+      // Last resort: show prompt with text to copy manually
+      prompt('Copia este enlace:', text);
+    } finally {
+      document.body.removeChild(textArea);
+    }
   } catch (err) {
     console.error('Failed to copy:', err);
-    alert('Error al copiar');
+    // Final fallback: show prompt
+    prompt('Copia este enlace:', text);
   }
 };
 
