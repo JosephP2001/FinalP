@@ -58,6 +58,13 @@ frontend/
 │   │   ├── exportService.js    # Export functionality
 │   │   ├── responseService.js  # Response API calls
 │   │   └── surveyService.js    # Survey API calls
+│   ├── utils/
+│   │   ├── dateUtils.js        # Date formatting & manipulation
+│   │   ├── index.js            # Centralized exports
+│   │   ├── statisticsUtils.js  # Statistical calculations
+│   │   ├── surveyUtils.js      # Survey-specific helpers
+│   │   ├── uiUtils.js          # UI helper functions
+│   │   └── validationUtils.js  # Form validation helpers
 │   ├── App.css                 # Application styles
 │   ├── App.jsx                 # Root component
 │   ├── index.css               # Global styles
