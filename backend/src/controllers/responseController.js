@@ -1,5 +1,6 @@
 import Response from '../models/Response.js';
 import Survey from '../models/Survey.js';
+import User from '../models/User.js';
 import { closeSurveyIfNeeded } from '../services/surveyClosureService.js';
 import { sendAlreadyResponded } from '../services/emailService.js';
 
@@ -24,6 +25,15 @@ export const submitResponse = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Email inválido'
+      });
+    }
+
+    // Verify user exists in database
+    const user = await User.findOne({ email: respondentEmail.toLowerCase() });
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Debes estar registrado en el sistema para responder esta encuesta'
       });
     }
 
@@ -60,7 +70,7 @@ export const submitResponse = async (req, res) => {
       });
     }
 
-    // FIXED: Check response limit BEFORE creating response
+    // Check response limit BEFORE creating response
     if (survey.settings?.maxResponses && survey.responseCount >= survey.settings.maxResponses) {
       return res.status(400).json({
         success: false,
@@ -91,7 +101,7 @@ export const submitResponse = async (req, res) => {
 
     await response.save();
 
-    // FIX: Increment counter and save
+    // Increment counter and save
     survey.responseCount = (survey.responseCount || 0) + 1;
     await survey.save();
 
@@ -211,13 +221,13 @@ export const getSurveyStats = async (req, res) => {
       });
     });
 
-    // FIX: Calculate response rate
+    // Calculate response rate
     let responseRate = 0;
     if (survey.settings?.maxResponses && survey.settings.maxResponses > 0) {
       responseRate = (responses.length / survey.settings.maxResponses) * 100;
     }
 
-    // FIX: Get last response date properly sorted
+    // Get last response date properly sorted
     const lastResponse = responses.length > 0 
       ? responses.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))[0].submittedAt
       : null;
@@ -228,8 +238,8 @@ export const getSurveyStats = async (req, res) => {
         totalResponses: responses.length,
         uniqueRespondents: responses.length,
         questionStats,
-        responseRate, // Added
-        latestResponse: lastResponse // Fixed
+        responseRate,
+        latestResponse: lastResponse
       }
     });
   } catch (error) {
