@@ -4,13 +4,18 @@ Modern, responsive web application for survey management built with React, Vite,
 
 ## 🌐 Production Deployment
 
-**Live URL**: https://joseph_ponce_1.programacionwebuce.net
+**Live URL**: https://joseph-ponce.programacionwebuce.net
 
 **Domain Configuration**: 
-- Primary domain managed through Cloudflare
-- SSL/TLS certificates: Self-signed (nginx)
-- Web server: Nginx with HTTPS support
+- Primary domain managed through Cloudflare (Proxied mode)
+- SSL/TLS: Managed by Cloudflare (Flexible SSL)
+- Web server: Nginx (HTTP only - port 80)
 - Hosted on: AWS EC2 (Ubuntu 22.04)
+
+**Architecture:**
+```
+Internet (HTTPS) → Cloudflare (SSL termination) → EC2 Nginx (HTTP:80) → Backend (HTTP:5000)
+```
 
 ## Technology Stack
 
@@ -22,8 +27,9 @@ Modern, responsive web application for survey management built with React, Vite,
 - **Recharts** - Data visualization
 - **React Hook Form** - Form management
 - **Emotion** - CSS-in-JS styling
-- **Nginx** - Production web server with SSL/TLS
+- **Nginx** - Production web server (HTTP)
 - **Docker** - Containerization
+- **Cloudflare** - SSL/TLS, CDN, DDoS protection
 
 ## Features
 
@@ -102,7 +108,7 @@ frontend/
 │   ├── App.jsx                  # Main application component
 │   ├── main.jsx                 # Application entry point
 │   └── index.css                # Global styles
-├── nginx.conf                   # Nginx configuration with SSL
+├── nginx.conf                   # Nginx configuration (HTTP only)
 ├── Dockerfile                   # Multi-stage Docker build
 ├── .env                         # Environment variables
 ├── .env.example                 # Environment template
@@ -117,14 +123,14 @@ frontend/
 ### Production Environment (.env)
 
 ```env
-VITE_API_URL=https://joseph_ponce_1.programacionwebuce.net/api
+VITE_API_URL=https://joseph-ponce.programacionwebuce.net/api
 VITE_APP_NAME=Sistema de Encuestas UCE
 VITE_APP_VERSION=1.0.0
 VITE_ENV=production
 VITE_ENABLE_AI_FEATURES=true
 VITE_ENABLE_ANALYTICS=true
 VITE_ENABLE_OAUTH=true
-VITE_GITHUB_AUTH_URL=https://joseph_ponce_1.programacionwebuce.net/api/auth/github
+VITE_GITHUB_AUTH_URL=https://joseph-ponce.programacionwebuce.net/api/auth/github
 ```
 
 ### Development Environment (.env)
@@ -216,54 +222,36 @@ Build output will be in the `dist/` directory.
 # Build Docker image
 docker build -t survey-frontend:latest .
 
-# Run container
+# Run container (only port 80, Cloudflare handles SSL)
 docker run -d \
   --name survey_frontend \
   -p 80:80 \
-  -p 443:443 \
-  -v /etc/nginx/ssl:/etc/nginx/ssl:ro \
   survey-frontend:latest
 ```
 
 ## Nginx Configuration
 
-### Production nginx.conf
+### Production nginx.conf (Cloudflare Proxied Mode)
 
 ```nginx
 server {
     listen 80;
     server_name _;
     
-    # Redirect all HTTP to HTTPS
-    return 301 https://$host$request_uri;
-}
-
-server {
-    listen 443 ssl;
-    server_name _;
-
-    # SSL Configuration
-    ssl_certificate /etc/nginx/ssl/nginx-selfsigned.crt;
-    ssl_certificate_key /etc/nginx/ssl/nginx-selfsigned.key;
-    
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers HIGH:!aNULL:!MD5;
-
     root /usr/share/nginx/html;
     index index.html;
-
+    
     # Gzip compression
     gzip on;
     gzip_vary on;
     gzip_min_length 10240;
-    gzip_proxied expired no-cache no-store private auth;
-    gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/javascript application/json;
-
+    gzip_types text/plain text/css text/xml text/javascript application/javascript application/json;
+    
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
-
+    
     # Proxy backend API
     location /api {
         resolver 127.0.0.11 valid=30s;
@@ -278,18 +266,18 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
     }
-
+    
     # Handle React Router (SPA)
     location / {
         try_files $uri $uri/ /index.html;
     }
-
+    
     # Cache static assets
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
-
+    
     # Health check endpoint
     location /health {
         access_log off;
@@ -301,8 +289,7 @@ server {
 
 ### Key Nginx Features
 
--  **HTTP to HTTPS Redirect** - All traffic encrypted
--  **SSL/TLS Support** - TLS 1.2 and 1.3
+-  **HTTP Only** - Cloudflare handles HTTPS/SSL
 -  **Dynamic DNS Resolution** - Docker service name resolution with resolver directive
 -  **Gzip Compression** - Reduced bandwidth usage
 -  **Security Headers** - XSS, clickjacking protection
@@ -311,7 +298,19 @@ server {
 -  **Reverse Proxy** - Backend API proxied through frontend
 -  **Health Check** - Container health monitoring
 
-### Important Nginx Configuration Notes
+### Cloudflare Configuration Notes
+
+**Why HTTP only?**
+
+With Cloudflare in **Proxied mode** (orange cloud ☁️):
+- Cloudflare terminates SSL/TLS and provides valid certificates
+- Traffic from Cloudflare to your server is HTTP (port 80)
+- No need for SSL certificates on your EC2 instance
+- Simpler configuration and maintenance
+
+**Cloudflare SSL/TLS Settings:**
+- Mode: **Flexible** (HTTPS → Cloudflare → HTTP → Server)
+- Proxy Status: **Proxied** (orange cloud enabled)
 
 **DNS Resolver Configuration:**
 ```nginx
@@ -360,7 +359,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost/health || exit 1
 
-EXPOSE 80 443
+EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]
 ```
@@ -373,23 +372,11 @@ CMD ["nginx", "-g", "daemon off;"]
 -  **Health Check** - Automatic container monitoring
 -  **Environment Variables** - Embedded at build time
 -  **Static Serving** - Nginx serves optimized assets
+-  **Port 80 Only** - Cloudflare handles SSL
 
 ## Production Deployment on EC2
 
-### 1. SSL Certificate Setup
-
-```bash
-# Create SSL directory
-sudo mkdir -p /etc/nginx/ssl
-
-# Generate self-signed certificate
-sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout /etc/nginx/ssl/nginx-selfsigned.key \
-  -out /etc/nginx/ssl/nginx-selfsigned.crt \
-  -subj "/C=EC/ST=Pichincha/L=Quito/O=UCE/CN=joseph_ponce_1.programacionwebuce.net"
-```
-
-### 2. Configure Environment
+### 1. Configure Environment
 
 ```bash
 cd ~/FinalP/frontend
@@ -400,20 +387,36 @@ nano .env
 
 Paste production configuration:
 ```env
-VITE_API_URL=https://joseph_ponce_1.programacionwebuce.net/api
+VITE_API_URL=https://joseph-ponce.programacionwebuce.net/api
 VITE_APP_NAME=Sistema de Encuestas UCE
 VITE_APP_VERSION=1.0.0
 VITE_ENV=production
 VITE_ENABLE_AI_FEATURES=true
 VITE_ENABLE_ANALYTICS=true
 VITE_ENABLE_OAUTH=true
-VITE_GITHUB_AUTH_URL=https://joseph_ponce_1.programacionwebuce.net/api/auth/github
+VITE_GITHUB_AUTH_URL=https://joseph-ponce.programacionwebuce.net/api/auth/github
 ```
+
+### 2. Configure AWS Security Group
+
+Ensure these inbound rules:
+
+| Type | Protocol | Port | Source | Note |
+|------|----------|------|--------|------|
+| SSH | TCP | 22 | Your IP | Admin access |
+| HTTP | TCP | 80 | 0.0.0.0/0 | Cloudflare traffic |
+| Custom TCP | TCP | 5000 | 0.0.0.0/0 | Backend API |
+
+**Note**: Port 443 (HTTPS) is NOT needed - Cloudflare handles SSL.
 
 ### 3. Deploy with Docker Compose
 
 ```bash
 cd ~/FinalP
+
+# Stop any system nginx that might conflict
+sudo systemctl stop nginx
+sudo systemctl disable nginx
 
 # Build and start frontend
 docker-compose up -d --build frontend
@@ -425,18 +428,19 @@ docker-compose up -d --build frontend
 # Check container status
 docker ps | grep survey_frontend
 
+# Should show: 0.0.0.0:80->80/tcp
+
 # View logs
 docker logs survey_frontend
 
-# Test locally
-curl http://localhost
-curl -k https://localhost
+# Test locally (should return 200)
+curl -I http://localhost
 
-# Test from outside
-curl https://joseph_ponce_1.programacionwebuce.net
+# Test from outside (Cloudflare will serve HTTPS)
+curl -I https://joseph-ponce.programacionwebuce.net
 ```
 
-### 5. Auto-start on System Reboot (Optional)
+### 5. Auto-start on System Reboot
 
 ```bash
 # Enable Docker to start on boot
@@ -475,6 +479,45 @@ sudo systemctl start survey-app
 sudo systemctl status survey-app
 ```
 
+## Cloudflare Configuration
+
+### DNS Settings
+
+In Cloudflare Dashboard → DNS:
+
+```
+Type: A
+Name: joseph-ponce
+Content: <your-ec2-elastic-ip>
+Proxy status: Proxied (☁️ orange cloud)
+TTL: Auto
+```
+
+### SSL/TLS Settings
+
+In Cloudflare Dashboard → SSL/TLS:
+
+**Mode: Flexible**
+```
+Browser (HTTPS) → Cloudflare (HTTPS) → Your Server (HTTP)
+```
+
+**Why Flexible?**
+- Your EC2 server only serves HTTP (port 80)
+- Cloudflare provides the SSL certificate to browsers
+- No need to manage certificates on your server
+
+### Benefits of Cloudflare Proxied Mode
+
+| Feature | Benefit |
+|---------|---------|
+|  **Free SSL Certificate** | Automatic, always valid |
+|  **DDoS Protection** | Cloudflare filters attacks |
+|  **CDN & Caching** | Faster global delivery |
+|  **IP Protection** | Your EC2 IP hidden |
+|  **Zero Certificate Management** | No renewals needed |
+|  **Simpler Server Config** | Just HTTP, no SSL setup |
+
 ## Available Scripts
 
 ### Development
@@ -509,8 +552,8 @@ npm run format
 # Build Docker image
 docker build -t survey-frontend .
 
-# Run Docker container
-docker run -d -p 80:80 -p 443:443 survey-frontend
+# Run Docker container (port 80 only)
+docker run -d -p 80:80 survey-frontend
 
 # View container logs
 docker logs survey_frontend
@@ -752,6 +795,7 @@ export default theme;
 - **Minification** - Compress JavaScript and CSS
 - **Asset Optimization** - Compress images and fonts
 - **Gzip Compression** - Server-side compression
+- **Cloudflare CDN** - Global edge caching
 
 ### Runtime Optimization
 
@@ -843,7 +887,7 @@ docker-compose up -d frontend
 
 This error occurs when nginx starts before Docker's DNS is ready.
 
-**Solution**: The nginx.conf now includes:
+**Solution**: The nginx.conf includes:
 ```nginx
 resolver 127.0.0.11 valid=30s;
 set $backend_upstream backend:5000;
@@ -860,32 +904,10 @@ docker-compose down
 docker-compose up -d
 ```
 
-**SSL certificate errors**
+**Port already in use (80)**
 ```bash
-# Verify certificates exist
-ls -la /etc/nginx/ssl/
-
-# Check nginx configuration
-docker exec survey_frontend nginx -t
-
-# Reload nginx
-docker exec survey_frontend nginx -s reload
-```
-
-**Environment variables not available in build**
-```bash
-# Ensure .env file exists before build
-ls -la frontend/.env
-
-# Verify variables in built files
-docker exec survey_frontend cat /usr/share/nginx/html/assets/*.js | grep VITE_API_URL
-```
-
-**Port already in use (80 or 443)**
-```bash
-# Check what's using the port
+# Check what's using port 80
 sudo lsof -i :80
-sudo lsof -i :443
 
 # If it's system nginx, stop it
 sudo systemctl stop nginx
@@ -895,6 +917,59 @@ sudo systemctl disable nginx
 docker-compose down
 docker-compose up -d
 ```
+
+**Container restart loop**
+```bash
+# Check logs for specific error
+docker logs survey_frontend --tail 50
+
+# Common causes:
+# 1. Nginx configuration syntax error
+docker exec survey_frontend nginx -t
+
+# 2. Backend service not found (fixed by resolver directive)
+```
+
+### Cloudflare Issues
+
+**Error 521: Web server is down**
+
+This means Cloudflare cannot reach your EC2 server.
+
+**Solutions:**
+```bash
+# 1. Verify containers are running
+docker ps
+
+# 2. Check nginx is listening on port 80
+sudo netstat -tlnp | grep :80
+
+# 3. Verify Security Group allows port 80
+# AWS Console → EC2 → Security Groups
+
+# 4. Test local connection
+curl -I http://localhost
+
+# 5. Restart containers if needed
+docker-compose restart
+```
+
+**Error 525: SSL Handshake Failed**
+
+This occurs if Cloudflare SSL mode is wrong.
+
+**Solution:**
+- Go to Cloudflare → SSL/TLS → Overview
+- Set to **Flexible** mode (not Full or Full Strict)
+
+**301 Moved Permanently loop**
+
+If you see endless redirects:
+
+**Solution:**
+- Ensure nginx.conf does NOT have `return 301 https://...`
+- Your nginx should only listen on port 80 (HTTP)
+- Cloudflare handles all HTTPS redirection
 
 ### Network Issues
 
@@ -907,21 +982,6 @@ docker-compose up -d
 - Ensure all API calls use HTTPS in production
 - Check VITE_API_URL uses https:// protocol
 - Verify nginx proxy configuration
-
-**Container restart loop**
-```bash
-# Check logs for specific error
-docker logs survey_frontend --tail 50
-
-# Common causes:
-# 1. Nginx configuration syntax error
-docker exec survey_frontend nginx -t
-
-# 2. Missing SSL certificates
-ls -la /etc/nginx/ssl/
-
-# 3. Backend service not found (fixed by resolver directive)
-```
 
 ## Security Best Practices
 
@@ -943,9 +1003,9 @@ ls -la /etc/nginx/ssl/
    - Don't commit .env to version control
 
 4. **HTTPS**
-   - Always use HTTPS in production
-   - Redirect HTTP to HTTPS
-   - Enable HSTS headers
+   - Cloudflare provides free SSL certificates
+   - All traffic automatically encrypted
+   - DDoS protection included
 
 ### Code Security Checklist
 
@@ -956,6 +1016,7 @@ ls -la /etc/nginx/ssl/
 - [ ] No sensitive data in localStorage
 - [ ] API endpoints use HTTPS
 - [ ] Error messages don't expose system details
+- [ ] Cloudflare security features enabled
 
 ## Testing
 
@@ -1074,9 +1135,17 @@ Developed and maintained by the UCE Survey System Development Team.
 
 ## Version History
 
+- **v1.0.2** (February 2026) - Cloudflare integration
+  - Migrated to Cloudflare Proxied mode
+  - Removed self-signed SSL certificates (Cloudflare manages SSL)
+  - Simplified nginx configuration (HTTP only)
+  - Free SSL/TLS with automatic renewal
+  - DDoS protection and CDN enabled
+  - Improved security and performance
+
 - **v1.0.1** (February 2026) - Production deployment
-  - SSL/TLS support with nginx
-  - Domain configuration with Cloudflare
+  - SSL/TLS support with self-signed certificates
+  - Domain configuration with Cloudflare DNS only
   - Reverse proxy for backend API
   - Dynamic DNS resolution for Docker networking
   - Production environment setup
@@ -1101,7 +1170,7 @@ Special thanks to:
 - **Vite** for blazing fast build tooling
 - **React** community for continuous innovation
 - **AWS** for hosting infrastructure
-- **Cloudflare** for domain and security services
+- **Cloudflare** for SSL/TLS, CDN, and security services
 
 ## Contributing
 
