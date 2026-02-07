@@ -239,7 +239,7 @@ server {
 }
 
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
     server_name _;
 
     # SSL Configuration
@@ -266,7 +266,9 @@ server {
 
     # Proxy backend API
     location /api {
-        proxy_pass http://backend:5000;
+        resolver 127.0.0.11 valid=30s;
+        set $backend_upstream backend:5000;
+        proxy_pass http://$backend_upstream;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -301,12 +303,27 @@ server {
 
 -  **HTTP to HTTPS Redirect** - All traffic encrypted
 -  **SSL/TLS Support** - TLS 1.2 and 1.3
+-  **Dynamic DNS Resolution** - Docker service name resolution with resolver directive
 -  **Gzip Compression** - Reduced bandwidth usage
 -  **Security Headers** - XSS, clickjacking protection
 -  **SPA Support** - Client-side routing handled correctly
 -  **Static Asset Caching** - 1 year cache for immutable assets
 -  **Reverse Proxy** - Backend API proxied through frontend
 -  **Health Check** - Container health monitoring
+
+### Important Nginx Configuration Notes
+
+**DNS Resolver Configuration:**
+```nginx
+resolver 127.0.0.11 valid=30s;
+set $backend_upstream backend:5000;
+proxy_pass http://$backend_upstream;
+```
+
+This configuration is **critical** for Docker environments:
+- `resolver 127.0.0.11` - Docker's internal DNS server
+- `set $backend_upstream` - Variable to force runtime DNS resolution
+- Prevents nginx from failing if backend container isn't ready at startup
 
 ## Dockerfile
 
@@ -350,12 +367,12 @@ CMD ["nginx", "-g", "daemon off;"]
 
 ### Dockerfile Features
 
-- ✅ **Multi-stage Build** - Smaller final image
-- ✅ **Alpine Linux** - Minimal base image
-- ✅ **npm ci** - Reproducible builds
-- ✅ **Health Check** - Automatic container monitoring
-- ✅ **Environment Variables** - Embedded at build time
-- ✅ **Static Serving** - Nginx serves optimized assets
+-  **Multi-stage Build** - Smaller final image
+-  **Alpine Linux** - Minimal base image
+-  **npm ci** - Reproducible builds
+-  **Health Check** - Automatic container monitoring
+-  **Environment Variables** - Embedded at build time
+-  **Static Serving** - Nginx serves optimized assets
 
 ## Production Deployment on EC2
 
@@ -417,6 +434,45 @@ curl -k https://localhost
 
 # Test from outside
 curl https://joseph_ponce_1.programacionwebuce.net
+```
+
+### 5. Auto-start on System Reboot (Optional)
+
+```bash
+# Enable Docker to start on boot
+sudo systemctl enable docker
+
+# Create systemd service for auto-start
+sudo nano /etc/systemd/system/survey-app.service
+```
+
+Paste this configuration:
+
+```ini
+[Unit]
+Description=Survey Application
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/home/ubuntu/FinalP
+ExecStart=/usr/bin/docker-compose up -d
+ExecStop=/usr/bin/docker-compose down
+User=ubuntu
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start the service:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable survey-app
+sudo systemctl start survey-app
+sudo systemctl status survey-app
 ```
 
 ## Available Scripts
@@ -783,6 +839,27 @@ docker-compose build --no-cache frontend
 docker-compose up -d frontend
 ```
 
+**Nginx error: "host not found in upstream 'backend'"**
+
+This error occurs when nginx starts before Docker's DNS is ready.
+
+**Solution**: The nginx.conf now includes:
+```nginx
+resolver 127.0.0.11 valid=30s;
+set $backend_upstream backend:5000;
+proxy_pass http://$backend_upstream;
+```
+
+If you still see this error:
+```bash
+# Restart the frontend container
+docker-compose restart frontend
+
+# Or rebuild completely
+docker-compose down
+docker-compose up -d
+```
+
 **SSL certificate errors**
 ```bash
 # Verify certificates exist
@@ -804,6 +881,21 @@ ls -la frontend/.env
 docker exec survey_frontend cat /usr/share/nginx/html/assets/*.js | grep VITE_API_URL
 ```
 
+**Port already in use (80 or 443)**
+```bash
+# Check what's using the port
+sudo lsof -i :80
+sudo lsof -i :443
+
+# If it's system nginx, stop it
+sudo systemctl stop nginx
+sudo systemctl disable nginx
+
+# Then restart containers
+docker-compose down
+docker-compose up -d
+```
+
 ### Network Issues
 
 **CORS errors**
@@ -815,6 +907,21 @@ docker exec survey_frontend cat /usr/share/nginx/html/assets/*.js | grep VITE_AP
 - Ensure all API calls use HTTPS in production
 - Check VITE_API_URL uses https:// protocol
 - Verify nginx proxy configuration
+
+**Container restart loop**
+```bash
+# Check logs for specific error
+docker logs survey_frontend --tail 50
+
+# Common causes:
+# 1. Nginx configuration syntax error
+docker exec survey_frontend nginx -t
+
+# 2. Missing SSL certificates
+ls -la /etc/nginx/ssl/
+
+# 3. Backend service not found (fixed by resolver directive)
+```
 
 ## Security Best Practices
 
@@ -971,8 +1078,10 @@ Developed and maintained by the UCE Survey System Development Team.
   - SSL/TLS support with nginx
   - Domain configuration with Cloudflare
   - Reverse proxy for backend API
+  - Dynamic DNS resolution for Docker networking
   - Production environment setup
   - Enhanced security headers
+  - Auto-start configuration for EC2
 
 - **v1.0.0** (January 2026) - Initial release
   - React 18.3 with Vite 5.4
@@ -999,5 +1108,3 @@ Special thanks to:
 This is a closed-source institutional project. Contributions are limited to authorized development team members only.
 
 ---
-
-**Built by JosephP2001**
