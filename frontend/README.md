@@ -1,171 +1,466 @@
 # Survey System - Frontend Application
 
-Modern, responsive web application for survey management with AI-powered analytics, built with React, Vite, and Tailwind CSS.
+Modern, responsive web application for survey management built with React, Vite, and Material-UI. Features AI-powered analytics, real-time updates, and OAuth integration.
+
+## 🌐 Production Deployment
+
+**Live URL**: https://joseph_ponce_1.programacionwebuce.net
+
+**Domain Configuration**: 
+- Primary domain managed through Cloudflare
+- SSL/TLS certificates: Self-signed (nginx)
+- Web server: Nginx with HTTPS support
+- Hosted on: AWS EC2 (Ubuntu 22.04)
 
 ## Technology Stack
 
-- **React** 18.3 - UI library
-- **Vite** 7.2 - Build tool and development server
-- **React Router DOM** 7.11 - Client-side routing
-- **Tailwind CSS** 3.4 - Utility-first CSS framework
-- **Axios** 1.13 - HTTP client
-- **React Hook Form** 7.71 - Form management
-- **Zod** 3.25 - Schema validation
-- **Recharts** 3.6 - Data visualization
-- **Lucide React** - Icon library
-- **XLSX** - Excel export functionality
-- **jsPDF** - PDF generation
-- **html2canvas** - Screenshot capture
-- **PapaParse** - CSV parsing
+- **React** 18.3+ - UI library
+- **Vite** 5.4+ - Build tool and dev server
+- **Material-UI (MUI)** 6.1+ - Component library
+- **React Router** 6.26+ - Client-side routing
+- **Axios** - HTTP client
+- **Recharts** - Data visualization
+- **React Hook Form** - Form management
+- **Emotion** - CSS-in-JS styling
+- **Nginx** - Production web server with SSL/TLS
+- **Docker** - Containerization
+
+## Features
+
+### Core Features
+-  **Survey Creation & Management** - Intuitive survey builder with multiple question types
+-  **Real-time Analytics** - Live response tracking and statistics
+-  **AI-Powered Analysis** - Intelligent insights powered by Groq AI
+-  **Authentication** - JWT + OAuth (GitHub) integration
+-  **Role-Based Access** - User and admin roles with different permissions
+-  **Responsive Design** - Mobile-first, works on all devices
+-  **Modern UI/UX** - Clean, professional interface with Material Design
+
+### Question Types Supported
+- Multiple Choice
+- Single Choice (Radio buttons)
+- Text Input (Short answer)
+- Long Text (Paragraph)
+- Rating Scale
+- Linear Scale
+- Checkbox Grid
+- Multiple Choice Grid
+
+### Admin Features
+- User management
+- Survey oversight
+- System statistics dashboard
+- Analytics and reporting
 
 ## Project Structure
 
 ```
 frontend/
-├── public/                      # Static assets
+├── public/
+│   └── vite.svg
 ├── src/
-│   ├── assets/
-│   │   └── react.svg           # Application assets
+│   ├── api/
+│   │   ├── axios.js              # Axios configuration
+│   │   └── endpoints.js          # API endpoint definitions
 │   ├── components/
+│   │   ├── admin/
+│   │   │   ├── AdminDashboard.jsx
+│   │   │   ├── UserManagement.jsx
+│   │   │   └── SurveyManagement.jsx
+│   │   ├── auth/
+│   │   │   ├── Login.jsx
+│   │   │   ├── Register.jsx
+│   │   │   └── ProtectedRoute.jsx
+│   │   ├── survey/
+│   │   │   ├── SurveyBuilder.jsx
+│   │   │   ├── SurveyList.jsx
+│   │   │   ├── SurveyResponse.jsx
+│   │   │   ├── SurveyResults.jsx
+│   │   │   └── AIAnalysis.jsx
 │   │   ├── common/
-│   │   │   ├── FormInput.jsx   # Reusable form input
-│   │   │   ├── FormSelect.jsx  # Reusable select component
-│   │   │   ├── FormTextarea.jsx # Reusable textarea
-│   │   │   └── Skeleton.jsx    # Loading skeleton
-│   │   ├── layout/
-│   │   │   └── Navbar.jsx      # Navigation component
-│   │   └── ProtectedRoute.jsx  # Route authentication guard
+│   │   │   ├── Navbar.jsx
+│   │   │   ├── Footer.jsx
+│   │   │   └── Loading.jsx
+│   │   └── layout/
+│   │       └── MainLayout.jsx
+│   ├── contexts/
+│   │   └── AuthContext.jsx      # Authentication state management
+│   ├── hooks/
+│   │   ├── useAuth.js           # Authentication hook
+│   │   └── useSurvey.js         # Survey management hook
 │   ├── pages/
-│   │   ├── AdminDashboard.jsx  # Admin overview
-│   │   ├── AdminUsers.jsx      # User management
-│   │   ├── AuthCallback.jsx    # OAuth callback handler
-│   │   ├── Dashboard.jsx       # User dashboard
-│   │   ├── Login.jsx           # Authentication page
-│   │   ├── SurveyBuilder.jsx   # Survey creation
-│   │   ├── SurveyEdit.jsx      # Survey editing
-│   │   ├── SurveyList.jsx      # Survey listing
-│   │   ├── SurveyRespond.jsx   # Survey response form
-│   │   └── SurveyResults.jsx   # Survey analytics & AI insights
-│   ├── schemas/
-│   │   ├── authSchemas.js      # Authentication validation
-│   │   ├── responseSchemas.js  # Response validation
-│   │   └── surveySchemas.js    # Survey validation
-│   ├── services/
-│   │   ├── adminService.js     # Admin API calls
-│   │   ├── aiService.js        # AI analysis API
-│   │   ├── api.js              # Axios instance
-│   │   ├── authService.js      # Authentication API
-│   │   ├── exportService.js    # Export functionality
-│   │   ├── responseService.js  # Response API calls
-│   │   └── surveyService.js    # Survey API calls
+│   │   ├── Home.jsx
+│   │   ├── Dashboard.jsx
+│   │   ├── CreateSurvey.jsx
+│   │   ├── MySurveys.jsx
+│   │   └── NotFound.jsx
+│   ├── styles/
+│   │   └── theme.js             # MUI theme configuration
 │   ├── utils/
-│   │   ├── dateUtils.js        # Date formatting & manipulation
-│   │   ├── index.js            # Centralized exports
-│   │   ├── statisticsUtils.js  # Statistical calculations
-│   │   ├── surveyUtils.js      # Survey-specific helpers
-│   │   ├── uiUtils.js          # UI helper functions
-│   │   └── validationUtils.js  # Form validation helpers
-│   ├── App.css                 # Application styles
-│   ├── App.jsx                 # Root component
-│   ├── index.css               # Global styles
-│   └── main.jsx                # Application entry point
-├── .dockerignore
-├── .env                        # Environment variables
-├── Dockerfile                  # Multi-stage Docker build
-├── eslint.config.js            # ESLint configuration
-├── index.html                  # HTML template
-├── nginx.conf                  # Nginx server configuration
+│   │   ├── constants.js         # Application constants
+│   │   └── helpers.js           # Utility functions
+│   ├── App.jsx                  # Main application component
+│   ├── main.jsx                 # Application entry point
+│   └── index.css                # Global styles
+├── nginx.conf                   # Nginx configuration with SSL
+├── Dockerfile                   # Multi-stage Docker build
+├── .env                         # Environment variables
+├── .env.example                 # Environment template
+├── index.html                   # HTML template
+├── vite.config.js               # Vite configuration
 ├── package.json
-├── postcss.config.js           # PostCSS configuration
-├── tailwind.config.js          # Tailwind CSS configuration
-└── vite.config.js              # Vite configuration
+└── package-lock.json
 ```
 
 ## Environment Configuration
 
-Create a `.env` file in the frontend root directory:
+### Production Environment (.env)
 
 ```env
-VITE_API_URL=http://localhost:5000/api
-
+VITE_API_URL=https://joseph_ponce_1.programacionwebuce.net/api
 VITE_APP_NAME=Sistema de Encuestas UCE
 VITE_APP_VERSION=1.0.0
-
-VITE_ENV=development
-
+VITE_ENV=production
 VITE_ENABLE_AI_FEATURES=true
 VITE_ENABLE_ANALYTICS=true
 VITE_ENABLE_OAUTH=true
+VITE_GITHUB_AUTH_URL=https://joseph_ponce_1.programacionwebuce.net/api/auth/github
+```
 
+### Development Environment (.env)
+
+```env
+VITE_API_URL=http://localhost:5000/api
+VITE_APP_NAME=Sistema de Encuestas UCE - Dev
+VITE_APP_VERSION=1.0.0
+VITE_ENV=development
+VITE_ENABLE_AI_FEATURES=true
+VITE_ENABLE_ANALYTICS=true
+VITE_ENABLE_OAUTH=true
 VITE_GITHUB_AUTH_URL=http://localhost:5000/api/auth/github
 ```
 
-## Installation and Development
+### Environment Variables Reference
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `VITE_API_URL` | Backend API endpoint | ✅ Yes |
+| `VITE_APP_NAME` | Application display name | ✅ Yes |
+| `VITE_APP_VERSION` | Application version | ✅ Yes |
+| `VITE_ENV` | Environment (development/production) | ✅ Yes |
+| `VITE_ENABLE_AI_FEATURES` | Enable AI analysis features | ❌ No |
+| `VITE_ENABLE_ANALYTICS` | Enable analytics dashboard | ❌ No |
+| `VITE_ENABLE_OAUTH` | Enable GitHub OAuth | ❌ No |
+| `VITE_GITHUB_AUTH_URL` | GitHub OAuth endpoint | ❌ No (if OAuth disabled) |
+
+**Important**: All Vite environment variables must be prefixed with `VITE_` to be exposed to the client-side code.
+
+## Installation and Setup
 
 ### Prerequisites
 
-- Node.js 18+
-- npm 9+
-- Docker (optional, for containerized deployment)
+- Node.js 18+ and npm 9+
+- Docker 20.10+ (for containerized deployment)
+- Docker Compose 2.0+ (optional, for full stack)
 
 ### Local Development Setup
 
+#### 1. Clone Repository
+
 ```bash
-# Navigate to frontend directory
+git clone <repository-url>
 cd frontend
+```
 
-# Install dependencies
+#### 2. Install Dependencies
+
+```bash
 npm install
+```
 
-# Start development server
+#### 3. Configure Environment
+
+```bash
+# Copy example environment file
+cp .env.example .env
+
+# Edit .env with your configuration
+nano .env
+```
+
+#### 4. Start Development Server
+
+```bash
 npm run dev
 ```
 
-The application will be available at `http://localhost:3000`
+The application will be available at `http://localhost:5173`
 
-### Build for Production
+### Production Build
+
+#### Local Production Build
 
 ```bash
+# Create optimized production build
 npm run build
-```
 
-Production build will be generated in the `dist/` directory.
-
-### Preview Production Build
-
-```bash
+# Preview production build locally
 npm run preview
 ```
 
-### Code Linting
+Build output will be in the `dist/` directory.
+
+#### Docker Production Build
 
 ```bash
-npm run lint
-```
-
-## Docker Deployment
-
-### Build Docker Image
-
-```bash
+# Build Docker image
 docker build -t survey-frontend:latest .
-```
 
-### Run Container
-
-```bash
+# Run container
 docker run -d \
-  --name survey-frontend \
-  -p 3000:80 \
+  --name survey_frontend \
+  -p 80:80 \
+  -p 443:443 \
+  -v /etc/nginx/ssl:/etc/nginx/ssl:ro \
   survey-frontend:latest
 ```
 
-### Docker Compose Deployment
+## Nginx Configuration
 
-From the project root:
+### Production nginx.conf
+
+```nginx
+server {
+    listen 80;
+    server_name _;
+    
+    # Redirect all HTTP to HTTPS
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name _;
+
+    # SSL Configuration
+    ssl_certificate /etc/nginx/ssl/nginx-selfsigned.crt;
+    ssl_certificate_key /etc/nginx/ssl/nginx-selfsigned.key;
+    
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Gzip compression
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 10240;
+    gzip_proxied expired no-cache no-store private auth;
+    gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/javascript application/json;
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+
+    # Proxy backend API
+    location /api {
+        proxy_pass http://backend:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Handle React Router (SPA)
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Cache static assets
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Health check endpoint
+    location /health {
+        access_log off;
+        return 200 "OK\n";
+        add_header Content-Type text/plain;
+    }
+}
+```
+
+### Key Nginx Features
+
+-  **HTTP to HTTPS Redirect** - All traffic encrypted
+-  **SSL/TLS Support** - TLS 1.2 and 1.3
+-  **Gzip Compression** - Reduced bandwidth usage
+-  **Security Headers** - XSS, clickjacking protection
+-  **SPA Support** - Client-side routing handled correctly
+-  **Static Asset Caching** - 1 year cache for immutable assets
+-  **Reverse Proxy** - Backend API proxied through frontend
+-  **Health Check** - Container health monitoring
+
+## Dockerfile
+
+### Multi-stage Build Dockerfile
+
+```dockerfile
+# Build stage
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code and .env
+COPY . .
+
+# Build with embedded environment variables
+RUN npm run build
+
+# Production stage
+FROM nginx:alpine
+
+# Copy custom nginx config
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy built files
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost/health || exit 1
+
+EXPOSE 80 443
+
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+### Dockerfile Features
+
+- ✅ **Multi-stage Build** - Smaller final image
+- ✅ **Alpine Linux** - Minimal base image
+- ✅ **npm ci** - Reproducible builds
+- ✅ **Health Check** - Automatic container monitoring
+- ✅ **Environment Variables** - Embedded at build time
+- ✅ **Static Serving** - Nginx serves optimized assets
+
+## Production Deployment on EC2
+
+### 1. SSL Certificate Setup
 
 ```bash
-docker-compose up -d frontend
+# Create SSL directory
+sudo mkdir -p /etc/nginx/ssl
+
+# Generate self-signed certificate
+sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout /etc/nginx/ssl/nginx-selfsigned.key \
+  -out /etc/nginx/ssl/nginx-selfsigned.crt \
+  -subj "/C=EC/ST=Pichincha/L=Quito/O=UCE/CN=joseph_ponce_1.programacionwebuce.net"
+```
+
+### 2. Configure Environment
+
+```bash
+cd ~/FinalP/frontend
+
+# Create production .env
+nano .env
+```
+
+Paste production configuration:
+```env
+VITE_API_URL=https://joseph_ponce_1.programacionwebuce.net/api
+VITE_APP_NAME=Sistema de Encuestas UCE
+VITE_APP_VERSION=1.0.0
+VITE_ENV=production
+VITE_ENABLE_AI_FEATURES=true
+VITE_ENABLE_ANALYTICS=true
+VITE_ENABLE_OAUTH=true
+VITE_GITHUB_AUTH_URL=https://joseph_ponce_1.programacionwebuce.net/api/auth/github
+```
+
+### 3. Deploy with Docker Compose
+
+```bash
+cd ~/FinalP
+
+# Build and start frontend
+docker-compose up -d --build frontend
+```
+
+### 4. Verify Deployment
+
+```bash
+# Check container status
+docker ps | grep survey_frontend
+
+# View logs
+docker logs survey_frontend
+
+# Test locally
+curl http://localhost
+curl -k https://localhost
+
+# Test from outside
+curl https://joseph_ponce_1.programacionwebuce.net
+```
+
+## Available Scripts
+
+### Development
+
+```bash
+# Start development server with hot reload
+npm run dev
+
+# Start development server with network access
+npm run dev -- --host
+```
+
+### Production
+
+```bash
+# Create optimized production build
+npm run build
+
+# Preview production build locally
+npm run preview
+
+# Lint code
+npm run lint
+
+# Format code with Prettier
+npm run format
+```
+
+### Docker
+
+```bash
+# Build Docker image
+docker build -t survey-frontend .
+
+# Run Docker container
+docker run -d -p 80:80 -p 443:443 survey-frontend
+
+# View container logs
+docker logs survey_frontend
+
+# Stop container
+docker stop survey_frontend
 ```
 
 ## Application Routes
@@ -173,613 +468,498 @@ docker-compose up -d frontend
 ### Public Routes
 
 ```
-/                          # Redirect to login
-/login                     # User authentication
-/auth/callback             # GitHub OAuth callback
-/surveys/:id/respond       # Public survey response form
+/                    # Landing page
+/login               # User login
+/register            # User registration
+/surveys/:id         # View public survey
+/surveys/:id/respond # Submit survey response
 ```
 
-### Protected Routes (Require Authentication)
+### Protected Routes (Authenticated Users)
 
 ```
-/dashboard                 # User dashboard
-/surveys                   # Survey list
-/surveys/create            # Create new survey
-/surveys/:id/edit          # Edit survey
-/surveys/:id/results       # Survey results and AI analytics
+/dashboard           # User dashboard
+/surveys/create      # Create new survey
+/surveys/my          # My surveys
+/surveys/:id/edit    # Edit survey
+/surveys/:id/results # View survey results
+/surveys/:id/ai-analysis # AI analysis
+/responses/my        # My responses
 ```
 
-### Admin Routes (Require Admin Role)
+### Admin Routes
 
 ```
-/admin                     # Admin dashboard
-/admin/users               # User management
-```
-
-## Key Features
-
-### Authentication
-- Email/password authentication
-- GitHub OAuth integration
-- JWT token management
-- Protected route guards
-- Automatic token refresh
-
-### Survey Management
-- Visual survey builder
-- Question types: text, multiple choice, scale, date
-- Survey settings: access control, response limits, scheduling
-- Real-time validation
-- Draft and publish workflow
-
-### Response Collection
-- Public and private survey access
-- Token-based authentication for restricted surveys
-- Email validation
-- Progress tracking
-- Response validation
-
-### AI-Powered Analytics
-- **Intelligent Analysis**: Powered by Groq's llama-3.3-70b-versatile model
-- **Executive Summaries**: Concise overview of survey results
-- **Key Insights**: Pattern and trend identification
-- **Sentiment Analysis**: Overall respondent sentiment scoring
-- **Actionable Recommendations**: Data-driven suggestions
-- **Rate Limit Awareness**: Real-time quota display
-
-### Analytics and Reporting
-- Interactive data visualizations
-- AI-powered insights and recommendations
-- Export to Excel, CSV, PDF
-- Chart generation (pie, bar, line charts)
-- Statistical summaries
-- Response timeline analysis
-
-### User Experience
-- Responsive design (mobile, tablet, desktop)
-- Loading skeletons and progress indicators
-- Form validation with error messages
-- Toast notifications
-- AI analysis status and quota display
-- Accessibility compliant
-
-## AI Features Integration
-
-### AI Analysis Service
-
-The frontend integrates with the backend AI service to provide intelligent survey analysis:
-
-```javascript
-// src/services/aiService.js
-
-export const aiService = {
-  /**
-   * Get current rate limit status
-   */
-  getRateLimitStatus: async () => {
-    const response = await axios.get(
-      `${API_URL}/ai/rate-limit-status`,
-      getAuthHeader()
-    );
-    return response.data;
-  },
-
-  /**
-   * Analyze survey with AI
-   */
-  analyzeSurvey: async (surveyId) => {
-    const response = await axios.post(
-      `${API_URL}/ai/analyze-survey/${surveyId}`,
-      {},
-      getAuthHeader()
-    );
-    return response.data;
-  }
-};
-```
-
-### Rate Limit Display
-
-The application displays AI analysis quota to users:
-
-```jsx
-// Example: Display in SurveyResults.jsx
-{rateLimitInfo && (
-  <div className="rate-limit-info">
-    <h4>Análisis IA Disponibles</h4>
-    <div className="limit-stats">
-      <div className="stat">
-        <span>Por hora:</span>
-        <strong>{rateLimitInfo.hourly.remaining}/{rateLimitInfo.hourly.limit}</strong>
-      </div>
-      <div className="stat">
-        <span>Por día:</span>
-        <strong>{rateLimitInfo.daily.remaining}/{rateLimitInfo.daily.limit}</strong>
-      </div>
-    </div>
-  </div>
-)}
-```
-
-### AI Error Handling
-
-The frontend gracefully handles rate limit errors:
-
-```javascript
-try {
-  const result = await aiService.analyzeSurvey(surveyId);
-  setAnalysis(result.analysis);
-  setRateLimitInfo(result.rateLimitInfo);
-} catch (err) {
-  if (err.isRateLimitError) {
-    // Display rate limit error
-    setError({
-      type: 'rate_limit',
-      message: err.message,
-      retryAfter: err.retryAfter
-    });
-  } else {
-    // Handle other errors
-    setError({
-      type: 'general',
-      message: 'Error al generar análisis'
-    });
-  }
-}
-```
-
-### AI Analysis Display
-
-Survey results page shows comprehensive AI insights:
-
-```jsx
-{analysis && (
-  <div className="ai-analysis-section">
-    <h3>📊 Análisis IA</h3>
-    
-    {/* Executive Summary */}
-    <div className="summary-card">
-      <h4>Resumen Ejecutivo</h4>
-      <p>{analysis.summary}</p>
-    </div>
-
-    {/* Key Insights */}
-    <div className="insights-card">
-      <h4>Insights Clave</h4>
-      <ul>
-        {analysis.keyInsights.map((insight, idx) => (
-          <li key={idx}>{insight}</li>
-        ))}
-      </ul>
-    </div>
-
-    {/* Sentiment Analysis */}
-    <div className="sentiment-card">
-      <h4>Análisis de Sentimiento</h4>
-      <div className="sentiment-score">
-        {analysis.sentiment.overall} - {analysis.sentiment.score}/100
-      </div>
-      <p>{analysis.sentiment.explanation}</p>
-    </div>
-
-    {/* Recommendations */}
-    <div className="recommendations-card">
-      <h4>Recomendaciones</h4>
-      <ol>
-        {analysis.recommendations.map((rec, idx) => (
-          <li key={idx}>{rec}</li>
-        ))}
-      </ol>
-    </div>
-  </div>
-)}
+/admin               # Admin dashboard
+/admin/users         # User management
+/admin/surveys       # Survey management
+/admin/stats         # System statistics
 ```
 
 ## API Integration
 
-### Base Configuration
-
-All API calls are configured through the centralized `api.js` service:
+### Axios Configuration
 
 ```javascript
+// src/api/axios.js
 import axios from 'axios';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
   }
 });
 
-// Request interceptor for JWT token
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// Request interceptor - Add auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-// Response interceptor for error handling
+// Response interceptor - Handle errors
 api.interceptors.response.use(
-  response => response,
-  error => {
+  (response) => response,
+  (error) => {
     if (error.response?.status === 401) {
-      // Handle unauthorized (redirect to login)
       localStorage.removeItem('token');
       window.location.href = '/login';
     }
     return Promise.reject(error);
   }
 );
+
+export default api;
 ```
 
-### Service Layer
+### API Usage Example
 
-Services provide abstraction over API endpoints:
+```javascript
+import api from '../api/axios';
 
-- `authService.js` - Authentication operations
-- `surveyService.js` - Survey CRUD operations
-- `responseService.js` - Response management
-- `aiService.js` - AI analysis requests
-- `adminService.js` - Administrative functions
-- `exportService.js` - Data export utilities
+// Fetch surveys
+const fetchSurveys = async () => {
+  try {
+    const response = await api.get('/surveys');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching surveys:', error);
+    throw error;
+  }
+};
+
+// Create survey
+const createSurvey = async (surveyData) => {
+  try {
+    const response = await api.post('/surveys', surveyData);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating survey:', error);
+    throw error;
+  }
+};
+```
+
+## Authentication Flow
+
+### JWT Authentication
+
+1. User logs in with email/password
+2. Backend returns JWT token
+3. Token stored in localStorage
+4. Token included in Authorization header for protected requests
+5. Token validated on each request
+6. On 401 response, user redirected to login
+
+### GitHub OAuth Flow
+
+1. User clicks "Login with GitHub"
+2. Redirected to GitHub authorization page
+3. User authorizes application
+4. GitHub redirects to callback URL with code
+5. Backend exchanges code for access token
+6. Backend creates/updates user and returns JWT
+7. Frontend receives JWT and stores it
+8. User authenticated and redirected to dashboard
 
 ## State Management
 
-The application uses:
-- **React Hooks** - Local component state (useState, useEffect, useReducer)
-- **localStorage** - Authentication persistence and user preferences
-- **React Router** - Navigation state
-- **Context API** - Global state for user authentication (when needed)
-
-## Form Validation
-
-### Schema-based Validation
-
-Using Zod and React Hook Form:
+### AuthContext
 
 ```javascript
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { loginSchema } from './schemas/authSchemas';
+// src/contexts/AuthContext.jsx
+import { createContext, useState, useEffect } from 'react';
+import api from '../api/axios';
 
-const { register, handleSubmit, formState: { errors } } = useForm({
-  resolver: zodResolver(loginSchema)
-});
-```
+export const AuthContext = createContext();
 
-### Validation Schemas
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-- `authSchemas.js` - Login and registration validation
-- `surveySchemas.js` - Survey creation validation
-- `responseSchemas.js` - Response submission validation
-
-## Styling Architecture
-
-### Tailwind CSS
-
-Utility-first approach with custom configuration:
-
-```javascript
-// tailwind.config.js
-theme: {
-  extend: {
-    colors: {
-      primary: {
-        50: '#f5f7ff',
-        100: '#ebf0ff',
-        200: '#d6e0ff',
-        300: '#b3c7ff',
-        400: '#809dff',
-        500: '#667eea',
-        600: '#5a67d8',
-        700: '#4c51bf',
-        800: '#434190',
-        900: '#3c366b'
-      }
-    },
-    animation: {
-      'spin-slow': 'spin 3s linear infinite',
-      'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite'
-    }
-  }
-}
-```
-
-### Component Styling
-
-- Mobile-first responsive design
-- Consistent spacing and typography
-- Custom color palette
-- Smooth transitions and animations
-- Dark mode ready (configurable)
-
-## Build Optimization
-
-### Vite Configuration
-
-```javascript
-build: {
-  outDir: 'dist',
-  sourcemap: false,
-  rollupOptions: {
-    output: {
-      manualChunks: {
-        vendor: ['react', 'react-dom', 'react-router-dom'],
-        charts: ['recharts'],
-        forms: ['react-hook-form', 'zod'],
-        utils: ['axios', 'date-fns']
-      }
-    }
-  },
-  chunkSizeWarningLimit: 1000
-}
-```
-
-### Code Splitting
-
-- Vendor bundle separation
-- Chart library chunking
-- Form library chunking
-- Lazy loading for routes (optional)
-
-### Performance Features
-
-- Tree shaking
-- Minification
-- Asset optimization
-- HTTP/2 ready
-- Gzip compression
-
-## Nginx Configuration
-
-Production deployment uses Nginx with optimized settings:
-
-```nginx
-server {
-  listen 80;
-  server_name localhost;
-  
-  # Gzip compression
-  gzip on;
-  gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
-  
-  location / {
-    root /usr/share/nginx/html;
-    index index.html;
-    try_files $uri $uri/ /index.html;
-  }
-  
-  # API proxy (optional, for same-origin requests)
-  location /api {
-    proxy_pass http://backend:5000;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection 'upgrade';
-    proxy_set_header Host $host;
-    proxy_cache_bypass $http_upgrade;
-  }
-  
-  # Cache static assets
-  location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-    expires 1y;
-    add_header Cache-Control "public, immutable";
-  }
-}
-```
-
-## Browser Support
-
-- Chrome 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
-
-## Development Guidelines
-
-### Code Style
-
-- ESLint configuration for code consistency
-- React best practices
-- Functional components with hooks
-- JSX naming conventions
-- Proper prop-types or TypeScript (future)
-
-### Component Structure
-
-```javascript
-import { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
-
-const ComponentName = ({ prop1, prop2 }) => {
-  // Hooks
-  const [state, setState] = useState(null);
-  
-  // Effects
   useEffect(() => {
-    // Side effects
+    const loadUser = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const response = await api.get('/auth/me');
+          setUser(response.data.data);
+        } catch (error) {
+          localStorage.removeItem('token');
+        }
+      }
+      setLoading(false);
+    };
+    loadUser();
   }, []);
-  
-  // Event handlers
-  const handleEvent = () => {
-    // Handler logic
+
+  const login = async (email, password) => {
+    const response = await api.post('/auth/login', { email, password });
+    const { token, user } = response.data.data;
+    localStorage.setItem('token', token);
+    setUser(user);
   };
-  
-  // Early returns
-  if (!state) return <div>Loading...</div>;
-  
-  // Render
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    setUser(null);
+  };
+
   return (
-    <div>
-      {/* JSX */}
-    </div>
+    <AuthContext.Provider value={{ user, login, logout, loading }}>
+      {children}
+    </AuthContext.Provider>
   );
 };
+```
 
-ComponentName.propTypes = {
-  prop1: PropTypes.string.isRequired,
-  prop2: PropTypes.number
-};
+## Theme Customization
 
-export default ComponentName;
+### MUI Theme Configuration
+
+```javascript
+// src/styles/theme.js
+import { createTheme } from '@mui/material/styles';
+
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#1976d2',
+      light: '#42a5f5',
+      dark: '#1565c0'
+    },
+    secondary: {
+      main: '#dc004e',
+      light: '#e33371',
+      dark: '#9a0036'
+    },
+    background: {
+      default: '#f5f5f5',
+      paper: '#ffffff'
+    }
+  },
+  typography: {
+    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+    h1: { fontWeight: 700 },
+    h2: { fontWeight: 600 },
+    h3: { fontWeight: 600 }
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+          textTransform: 'none',
+          fontWeight: 600
+        }
+      }
+    }
+  }
+});
+
+export default theme;
+```
+
+## Performance Optimization
+
+### Build Optimization
+
+- **Code Splitting** - Lazy loading for routes
+- **Tree Shaking** - Remove unused code
+- **Minification** - Compress JavaScript and CSS
+- **Asset Optimization** - Compress images and fonts
+- **Gzip Compression** - Server-side compression
+
+### Runtime Optimization
+
+- **React.memo** - Prevent unnecessary re-renders
+- **useMemo/useCallback** - Memoize expensive computations
+- **Lazy Loading** - Load components on demand
+- **Virtualization** - Render only visible list items
+- **Debouncing** - Delay API calls on user input
+
+### Example: Lazy Loading
+
+```javascript
+import { lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Loading from './components/common/Loading';
+
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const CreateSurvey = lazy(() => import('./pages/CreateSurvey'));
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Suspense fallback={<Loading />}>
+        <Routes>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/surveys/create" element={<CreateSurvey />} />
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
+  );
+}
 ```
 
 ## Troubleshooting
 
-### Port 3000 Already in Use
+### Build Issues
 
-```bash
-# Kill process on port 3000
-lsof -i :3000
-kill -9 <PID>
-
-# Or use different port in vite.config.js
-server: {
-  port: 3001
-}
-```
-
-### API Connection Issues
-
-```bash
-# Verify backend is running
-curl http://localhost:5000/api/health
-
-# Check VITE_API_URL in .env
-VITE_API_URL=http://localhost:5000/api
-```
-
-### Build Errors
-
+**Error: Cannot find module**
 ```bash
 # Clear node_modules and reinstall
 rm -rf node_modules package-lock.json
 npm install
-
-# Clear Vite cache
-rm -rf .vite node_modules/.vite
 ```
 
-### Docker Build Failures
-
+**Build fails with memory error**
 ```bash
-# Clear Docker cache
-docker builder prune
+# Increase Node.js memory limit
+NODE_OPTIONS="--max-old-space-size=4096" npm run build
+```
+
+### Runtime Issues
+
+**API calls failing**
+```javascript
+// Check VITE_API_URL in .env
+console.log(import.meta.env.VITE_API_URL);
+
+// Verify backend is running
+curl http://localhost:5000/health
+```
+
+**Environment variables not working**
+- Ensure variables start with `VITE_`
+- Restart dev server after changing .env
+- Rebuild for production after .env changes
+
+**Authentication not persisting**
+```javascript
+// Check localStorage
+console.log(localStorage.getItem('token'));
+
+// Clear localStorage if corrupted
+localStorage.clear();
+```
+
+### Docker Issues
+
+**Container not starting**
+```bash
+# Check container logs
+docker logs survey_frontend
 
 # Rebuild without cache
-docker build --no-cache -t survey-frontend .
+docker-compose build --no-cache frontend
+docker-compose up -d frontend
 ```
 
-### AI Features Not Working
-
-**Check Backend Connection:**
+**SSL certificate errors**
 ```bash
-curl http://localhost:5000/api/ai/rate-limit-status \
-  -H "Authorization: Bearer <your-token>"
+# Verify certificates exist
+ls -la /etc/nginx/ssl/
+
+# Check nginx configuration
+docker exec survey_frontend nginx -t
+
+# Reload nginx
+docker exec survey_frontend nginx -s reload
 ```
 
-**Verify Environment Variable:**
-```env
-VITE_ENABLE_AI_FEATURES=true
+**Environment variables not available in build**
+```bash
+# Ensure .env file exists before build
+ls -la frontend/.env
+
+# Verify variables in built files
+docker exec survey_frontend cat /usr/share/nginx/html/assets/*.js | grep VITE_API_URL
 ```
 
-**Check Console for Errors:**
-- Open browser DevTools (F12)
-- Check Console tab for API errors
-- Check Network tab for failed requests
+### Network Issues
+
+**CORS errors**
+- Verify CORS_ORIGIN in backend .env matches frontend URL
+- Check browser console for specific CORS error
+- Ensure backend is running and accessible
+
+**Mixed content warnings (HTTP/HTTPS)**
+- Ensure all API calls use HTTPS in production
+- Check VITE_API_URL uses https:// protocol
+- Verify nginx proxy configuration
+
+## Security Best Practices
+
+### Client-Side Security
+
+1. **XSS Protection**
+   - Sanitize user input before rendering
+   - Use React's built-in XSS protection
+   - Avoid dangerouslySetInnerHTML
+
+2. **Authentication**
+   - Store JWT in localStorage (or httpOnly cookies for enhanced security)
+   - Validate tokens on every protected route
+   - Implement token refresh mechanism
+
+3. **Environment Variables**
+   - Never expose API keys in frontend
+   - Only use VITE_ prefix for safe variables
+   - Don't commit .env to version control
+
+4. **HTTPS**
+   - Always use HTTPS in production
+   - Redirect HTTP to HTTPS
+   - Enable HSTS headers
+
+### Code Security Checklist
+
+- [ ] Input validation on all forms
+- [ ] CSRF protection (handled by backend)
+- [ ] Secure headers configured in nginx
+- [ ] Dependencies regularly updated
+- [ ] No sensitive data in localStorage
+- [ ] API endpoints use HTTPS
+- [ ] Error messages don't expose system details
 
 ## Testing
 
-### Manual Testing Checklist
+### Unit Testing (Future Implementation)
 
-- [ ] User registration and login
-- [ ] OAuth authentication (GitHub)
-- [ ] Survey creation and editing
-- [ ] Survey response submission
-- [ ] Results visualization
-- [ ] AI analysis generation
-- [ ] AI rate limit display
-- [ ] Export functionality (Excel, CSV, PDF)
-- [ ] Admin user management
-- [ ] Responsive design verification
-- [ ] Cross-browser compatibility
+```bash
+# Install testing dependencies
+npm install --save-dev vitest @testing-library/react @testing-library/jest-dom
 
-### AI Features Testing
+# Run tests
+npm run test
 
-- [ ] AI analysis button appears for surveys with responses
-- [ ] Rate limit status displays correctly
-- [ ] AI analysis generates successfully
-- [ ] Rate limit errors display properly
-- [ ] Cooldown timer shows remaining time
-- [ ] Analysis results display all sections (summary, insights, sentiment, recommendations)
-
-## Security Considerations
-
-- **XSS Prevention**: Input sanitization and proper escaping
-- **CSRF Protection**: Token-based authentication
-- **Secure Storage**: No sensitive data in localStorage (only JWT token)
-- **HTTPS**: Required for production
-- **Content Security Policy**: Configured headers
-- **Environment Variables**: No secrets in client code
-- **API Key Protection**: No Groq API key in frontend (handled by backend)
-
-## Production Deployment
-
-### Environment Variables for Production
-
-```env
-VITE_API_URL=https://api.your-domain.com/api
-VITE_ENV=production
-VITE_GITHUB_AUTH_URL=https://api.your-domain.com/api/auth/github
-VITE_ENABLE_AI_FEATURES=true
-VITE_ENABLE_ANALYTICS=true
-VITE_ENABLE_OAUTH=true
+# Run tests with coverage
+npm run test:coverage
 ```
 
-### Deployment Checklist
+### E2E Testing (Future Implementation)
 
-- [ ] Update environment variables
-- [ ] Build production bundle (`npm run build`)
-- [ ] Test production build locally (`npm run preview`)
-- [ ] Configure Nginx/web server
-- [ ] Set up SSL certificates (Let's Encrypt)
-- [ ] Configure CORS on backend
-- [ ] Test all functionality
-- [ ] Monitor error logs
-- [ ] Set up analytics (optional)
-- [ ] Configure CDN (optional)
+```bash
+# Install Playwright
+npm install --save-dev @playwright/test
 
-## Performance Metrics
-
-Target metrics for production:
-
-- **First Contentful Paint**: < 1.5s
-- **Largest Contentful Paint**: < 2.5s
-- **Time to Interactive**: < 3.5s
-- **Cumulative Layout Shift**: < 0.1
-- **First Input Delay**: < 100ms
+# Run E2E tests
+npx playwright test
+```
 
 ## Accessibility
 
-The application follows WCAG 2.1 Level AA standards:
+### WCAG 2.1 Compliance
 
-- Semantic HTML elements
-- ARIA labels where needed
-- Keyboard navigation support
-- Screen reader compatibility
-- Sufficient color contrast ratios (4.5:1 minimum)
-- Focus indicators
-- Form labels and error messages
-- Skip navigation links
+-  Semantic HTML elements
+-  ARIA labels on interactive elements
+-  Keyboard navigation support
+-  Sufficient color contrast
+-  Focus indicators
+-  Screen reader friendly
+
+### Accessibility Features
+
+```javascript
+// Example: Accessible button
+<Button
+  aria-label="Create new survey"
+  onClick={handleCreate}
+>
+  Create Survey
+</Button>
+
+// Example: Accessible form
+<TextField
+  id="email"
+  label="Email Address"
+  type="email"
+  required
+  aria-required="true"
+  aria-describedby="email-helper"
+/>
+```
+
+## Browser Support
+
+### Supported Browsers
+
+-  Chrome 90+
+-  Firefox 88+
+-  Safari 14+
+-  Edge 90+
+-  Opera 76+
+
+### Mobile Support
+
+-  iOS Safari 14+
+-  Chrome Mobile 90+
+-  Samsung Internet 14+
+
+## Monitoring and Analytics
+
+### Production Monitoring (Future Enhancement)
+
+```javascript
+// Error tracking with Sentry
+import * as Sentry from "@sentry/react";
+
+Sentry.init({
+  dsn: "your-sentry-dsn",
+  environment: import.meta.env.VITE_ENV
+});
+
+// Performance monitoring
+import { BrowserTracing } from "@sentry/tracing";
+```
+
+### Analytics Integration (Future Enhancement)
+
+```javascript
+// Google Analytics 4
+import ReactGA from 'react-ga4';
+
+ReactGA.initialize('G-XXXXXXXXXX');
+
+// Track page views
+ReactGA.send({ hitType: "pageview", page: window.location.pathname });
+```
 
 ## License
 
 This project is proprietary and confidential. All rights reserved by Universidad Central del Ecuador.
 
-## Support and Maintenance
+## Support
 
-For technical support, bug reports, or feature requests, please contact the system administrator.
+For technical support, bug reports, or feature requests, please contact the development team.
 
 ## Development Team
 
@@ -787,34 +967,37 @@ Developed and maintained by the UCE Survey System Development Team.
 
 ## Version History
 
-- **v1.0.0** - Initial release
-  - User authentication and authorization
-  - Survey builder interface
-  - Response collection system
-  - Analytics dashboard
-  - AI-powered insights with Groq integration
-  - Rate limit awareness and display
-  - Export functionality (Excel, CSV, PDF)
-  - Admin panel
+- **v1.0.1** (February 2026) - Production deployment
+  - SSL/TLS support with nginx
+  - Domain configuration with Cloudflare
+  - Reverse proxy for backend API
+  - Production environment setup
+  - Enhanced security headers
+
+- **v1.0.0** (January 2026) - Initial release
+  - React 18.3 with Vite 5.4
+  - Material-UI component library
+  - JWT authentication
+  - GitHub OAuth integration
+  - Survey creation and management
+  - AI analysis integration
   - Responsive design
+  - Admin dashboard
 
 ## Acknowledgments
 
-Special thanks to Universidad Central del Ecuador for supporting this project development.
+Special thanks to:
+- **Universidad Central del Ecuador** for project support
+- **Material-UI** for the excellent component library
+- **Vite** for blazing fast build tooling
+- **React** community for continuous innovation
+- **AWS** for hosting infrastructure
+- **Cloudflare** for domain and security services
 
-## Future Enhancements
+## Contributing
 
-Planned features for future releases:
+This is a closed-source institutional project. Contributions are limited to authorized development team members only.
 
-- [ ] TypeScript migration
-- [ ] Dark mode toggle
-- [ ] Real-time collaboration
-- [ ] Advanced chart customization
-- [ ] Survey templates library
-- [ ] Multi-language support
-- [ ] Survey branching logic
-- [ ] Email notifications
-- [ ] Survey sharing via social media
-- [ ] Advanced filtering and search
-- [ ] Bulk operations
-- [ ] Survey versioning
+---
+
+**Built by JosephP2001**
